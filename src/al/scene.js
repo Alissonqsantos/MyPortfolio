@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
+import { COSMOS, buildCosmos } from './cosmos.js';
 import { poseAt } from './choreography.js';
 
 // Escala global derivada da ALTURA (1.0 no padrão) — mesma do Al3D.
@@ -29,7 +30,8 @@ export function createAlScene(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
   const cena = new THREE.Scene();
-  cena.background = new THREE.Color(CONFIG.FUNDO);
+  cena.background = new THREE.Color(COSMOS.FUNDO);
+  cena.add(buildCosmos());
 
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
@@ -175,7 +177,12 @@ export function createAlScene(canvas) {
       cena.traverse(o => {
         if (o.geometry && !liberados.has(o.geometry)) { liberados.add(o.geometry); o.geometry.dispose(); }
         const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
-        for (const m of mats) if (!liberados.has(m)) { liberados.add(m); m.dispose(); }
+        for (const m of mats) {
+          if (liberados.has(m)) continue;
+          liberados.add(m);
+          if (m.map) m.map.dispose();
+          m.dispose();
+        }
       });
       pmrem.dispose();
       if (cenaEnv) cenaEnv.dispose();
