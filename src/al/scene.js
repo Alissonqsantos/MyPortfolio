@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
-import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, buildLuzesCosmos } from './cosmos.js';
+import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildLuzesCosmos } from './cosmos.js';
 import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
@@ -161,7 +161,7 @@ export function createAlScene(canvas) {
 
   let rafId = 0;
   const estatico = typeof matchMedia !== 'undefined' && prefereReduzirMovimento();
-  let cadAtiva = null, tCad = 0, esperaCad = 6;
+  let cadAtiva = null, tCad = 0, esperaCad = 4;
   (function loop() {
     rafId = requestAnimationFrame(loop);
     const dt = Math.min(relogio.getDelta(), 0.05);
@@ -171,7 +171,9 @@ export function createAlScene(canvas) {
     if (!estatico) {
       // Deriva quase parada: volta completa em ~42min.
       estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
-      // Cadentes raras: uma a cada 9–22s, rastro de 0.5–0.9s.
+      // Névoas à deriva: o cosmos respira (período ~2min).
+      atualizarNevoas(cosmos, relogio.elapsedTime);
+      // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
       if (cadAtiva) {
         tCad += dt;
         if (tCad >= cadAtiva.dur) {

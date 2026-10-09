@@ -2,9 +2,9 @@ import * as THREE from 'three';
 
 // Fundo cósmico do hero — tokens reais do design system Superconscious do vault:
 // deep #000060, violeta #7322F2, lilás #E296FF, névoa #F4D6FF, lavanda #9780FF.
-// Estrelas (Points) + névoas (Sprites com gradiente radial). Estático por
-// construção: sem animação, sem custo por frame, reduced-motion atendido.
-// Módulo puro — sem renderer/DOM (nebulosa via DataTexture). Testável em Node.
+// Deriva lenta nas estrelas e névoas + cadentes ocasionais. Tudo paramétrico
+// e desligado sob prefers-reduced-motion. Módulo puro — sem renderer/DOM
+// (nebulosa via DataTexture). Testável em Node.
 export const COSMOS = {
   FUNDO: 0x0c0b0c,
   ESTRELAS: 900,
@@ -23,11 +23,15 @@ export const COSMOS = {
     { cor: [151, 128, 255], opacidade: 0.10, pos: [-6, -10, 26], escala: 30 },
   ],
   CADENTE: {
-    ESPERA_MIN: 9, ESPERA_MAX: 22,   // raras: uma a cada 9–22s
+    ESPERA_MIN: 5, ESPERA_MAX: 13,    // uma a cada 5–13s
     DUR_MIN: 0.5, DUR_MAX: 0.9,      // rastro bem rápido
-    COMP_MIN: 10, COMP_MAX: 16,      // comprimento do rastro
+    COMP_MIN: 6, COMP_MAX: 10,       // rastro curto e discreto
     OPAC_MAX: 0.5,                   // tênue, não chama atenção
     RAIO_MIN: 42, RAIO_MAX: 50,      // longe das letras e da câmera
+  },
+  NEVOA_DERIVA: {
+    AMP: 2.5,   // deslocamento máximo (unidades de cena)
+    VEL: 0.05,  // período ~2min — o cosmos respira, sem pressa
   },
   // Luzes que amarram o Al ao cosmo: mesma direção das névoas,
   // intensidade baixa para não brigar com key/fill/rim aprovadas.
@@ -94,16 +98,19 @@ export function buildCosmos() {
   estrelas.frustumCulled = false;
   grupo.add(estrelas);
 
-  for (const n of COSMOS.NEVOAS) {
+  COSMOS.NEVOAS.forEach((n, i) => {
     const smat = new THREE.SpriteMaterial({
       map: nevoaTexture(n.cor), transparent: true, opacity: n.opacidade,
       blending: THREE.AdditiveBlending, depthWrite: false,
     });
     const spr = new THREE.Sprite(smat);
+    spr.name = `nevoa-${i}`;
+    spr.userData.base = [...n.pos];
+    spr.userData.indice = i;
     spr.position.set(...n.pos);
     spr.scale.set(n.escala, n.escala, 1);
     grupo.add(spr);
-  }
+  });
   return grupo;
 }
 
@@ -181,4 +188,24 @@ export function buildLuzesCosmos(esc = 1) {
     luz.position.set(l.POS[0] * esc, l.POS[1] * esc, l.POS[2] * esc);
     return luz;
   });
+}
+
+// Deriva de uma névoa no instante t: oscilação lenta em torno da base,
+// zero em t=0 (fases distintas por índice p/ movimento orgânico).
+export function derivaNevoa(base, t, i) {
+  const { AMP: A, VEL: V } = COSMOS.NEVOA_DERIVA;
+  const fx = i * 1.7, fy = i * 2.9;
+  return [
+    base[0] + (Math.sin(t * V + fx) - Math.sin(fx)) * A,
+    base[1] + (Math.sin(t * V * 0.8 + fy) - Math.sin(fy)) * A * 0.6,
+    base[2],
+  ];
+}
+
+// Aplica a deriva às névoas do grupo (uma chamada por frame na cena).
+export function atualizarNevoas(grupo, t) {
+  for (const o of grupo.children) {
+    if (!o.name.startsWith('nevoa')) continue;
+    o.position.set(...derivaNevoa(o.userData.base, t, o.userData.indice));
+  }
 }

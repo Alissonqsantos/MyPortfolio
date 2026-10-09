@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, buildLuzesCosmos, semente } from '../src/al/cosmos.js'
+import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildLuzesCosmos, semente } from '../src/al/cosmos.js'
 
 describe('fundo cósmico', () => {
   it('gera 900 estrelas dentro da casca 40-60', () => {
@@ -88,5 +88,24 @@ describe('fundo cósmico', () => {
     const cores = luzes.map((l) => l.color.getHex())
     expect(cores).toContain(0x7322f2)
     expect(cores).toContain(0xe296ff)
+  })
+  it('névoas derivam devagar em torno da base (cosmos vivo)', () => {
+    const grupo = buildCosmos()
+    const nevoas = grupo.children.filter((o) => o.name.startsWith('nevoa'))
+    expect(nevoas).toHaveLength(COSMOS.NEVOAS.length)
+    atualizarNevoas(grupo, 0)
+    nevoas.forEach((n, i) => {
+      expect(n.position.toArray()).toEqual(COSMOS.NEVOAS[i].pos)
+    })
+    atualizarNevoas(grupo, 30)
+    nevoas.forEach((n, i) => {
+      const base = COSMOS.NEVOAS[i].pos
+      const d = Math.hypot(n.position.x - base[0], n.position.y - base[1])
+      // oscilação senoidal: deslocamento limitado a ~2.4x a amplitude
+      expect(d).toBeLessThanOrEqual(COSMOS.NEVOA_DERIVA.AMP * 2.5)
+    })
+  })
+  it('deriva das névoas é lenta (período acima de 1min)', () => {
+    expect((Math.PI * 2) / COSMOS.NEVOA_DERIVA.VEL).toBeGreaterThan(60)
   })
 })
