@@ -5,11 +5,11 @@ const clamp01 = (t) => Math.min(1, Math.max(0, t));
 const smoothstep = (x) => x * x * (3 - 2 * x);
 
 export const CHAPTERS = [
-  { n: '01', word: 'IDENTITY', pose: { pos: [9.5, 5.0, 15.0], target: [-1.5, 0.0, 0.0] } },
-  { n: '02', word: 'CRAFT',    pose: { pos: [4.0, -3.5, 13.0], target: [0.0, 1.2, 0.0] } },
-  { n: '03', word: 'DETAIL',   pose: { pos: [0.6, 3.2, 4.5],  target: [-1.7, 2.6, 0.0] } },
-  { n: '04', word: 'SYSTEMS',  pose: { pos: [3.0, 12.0, 8.0], target: [0.0, 0.0, 0.0] } },
-  { n: '05', word: 'IMPACT',   pose: { pos: [0.0, 2.0, 30.0], target: [0.0, 0.0, 0.0] } },
+  { n: '01', word: 'IDENTITY', pose: { pos: [1.8, 1.8, 7.5], target: [-0.6, 0.2, 0.0] } },
+  { n: '02', word: 'CRAFT',    pose: { pos: [1.2, -1.5, 6.5], target: [-0.3, 1.0, 0.0] } },
+  { n: '03', word: 'DETAIL',   pose: { pos: [0.2, 2.2, 3.0],  target: [-0.8, 2.0, 0.0] } },
+  { n: '04', word: 'SYSTEMS',  pose: { pos: [1.0, 6.0, 4.0], target: [0.0, 0.0, 0.0] } },
+  { n: '05', word: 'IMPACT',   pose: { pos: [0.0, 1.5, 12.0], target: [0.0, 0.3, 0.0] } },
 ];
 
 export function chapterIndexFor(t) {
