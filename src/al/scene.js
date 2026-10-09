@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
-import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildLuzesCosmos } from './cosmos.js';
+import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildSol, criarHaloSol, atualizarSol } from './cosmos.js';
 import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
@@ -42,7 +42,7 @@ export function createAlScene(canvas) {
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
 
-  // Roxas do cosmos (protagonistas) + brancas em baixa intensidade (apoio).
+  // Brancas baixas (apoio, sem sombra) + SOL do cosmos (protagonista, com sombra).
   let cenaEnv = null;
   const pmrem = new THREE.PMREMGenerator(renderer);
   cenaEnv = pmrem.fromScene(new RoomEnvironment(renderer), CONFIG.AMBIENTE);
@@ -53,10 +53,6 @@ export function createAlScene(canvas) {
 
   const key = new THREE.DirectionalLight(CONFIG.LUZ_KEY.COR, CONFIG.LUZ_KEY.INT);
   key.position.set(...CONFIG.LUZ_KEY.POS).multiplyScalar(ESC);
-  key.castShadow = true;
-  key.shadow.mapSize.set(sombraRes, sombraRes);
-  key.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; key.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
-  key.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; key.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
   cena.add(key);
   const fill = new THREE.DirectionalLight(CONFIG.LUZ_FILL.COR, CONFIG.LUZ_FILL.INT);
   fill.position.set(...CONFIG.LUZ_FILL.POS).multiplyScalar(ESC);
@@ -64,7 +60,15 @@ export function createAlScene(canvas) {
   const rim = new THREE.DirectionalLight(CONFIG.LUZ_RIM.COR, CONFIG.LUZ_RIM.INT);
   rim.position.set(...CONFIG.LUZ_RIM.POS).multiplyScalar(ESC);
   cena.add(rim);
-  for (const l of buildLuzesCosmos(ESC)) cena.add(l);
+  // A sombra do Al vem do sol — ela se move com ele.
+  const sol = buildSol(ESC);
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(sombraRes, sombraRes);
+  sol.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
+  sol.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
+  cena.add(sol);
+  const haloSol = criarHaloSol(ESC);
+  cena.add(haloSol);
 
   const modelo = buildAl(makeLetterMaterial(), makeLetterMaterial());
   modelo.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -173,6 +177,8 @@ export function createAlScene(canvas) {
       estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
       // Névoas à deriva: o cosmos respira (período ~2min).
       atualizarNevoas(cosmos, relogio.elapsedTime);
+      // Sol em órbita: a luz roxa no Al vem sempre da posição dele.
+      atualizarSol(sol, haloSol, relogio.elapsedTime, ESC);
       // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
       if (cadAtiva) {
         tCad += dt;

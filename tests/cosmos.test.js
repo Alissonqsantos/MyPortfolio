@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildLuzesCosmos, semente } from '../src/al/cosmos.js'
+import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildSol, posicaoSol, criarHaloSol, atualizarSol, semente } from '../src/al/cosmos.js'
 
 describe('fundo cósmico', () => {
   it('gera 900 estrelas dentro da casca 40-60', () => {
@@ -78,16 +78,34 @@ describe('fundo cósmico', () => {
     expect(attr.getZ(1)).toBeCloseTo(esp.tail[2], 5)
     expect(linha.material.opacity).toBeCloseTo(esp.opacidade, 6)
   })
-  it('luzes do cosmo nas cores das névoas, suaves e sem sombra', () => {
-    const luzes = buildLuzesCosmos(1)
-    expect(luzes).toHaveLength(COSMOS.LUZES.length)
-    for (const l of luzes) {
-      expect(l.intensity).toBeLessThanOrEqual(1.2)
-      expect(l.castShadow).toBe(false)
+  it('sol é entidade única roxa em órbita distante (nunca encosta no Al)', () => {
+    const sol = buildSol(1)
+    expect(sol.isDirectionalLight).toBe(true)
+    expect(sol.color.getHex()).toBe(COSMOS.SOL.COR)
+    expect(sol.intensity).toBe(COSMOS.SOL.INT)
+    // órbita: raio constante no plano XZ, longe das letras e da câmera
+    for (const t of [0, 10, 20, 40, 60]) {
+      const p = posicaoSol(t)
+      expect(Math.hypot(p[0], p[2])).toBeCloseTo(COSMOS.SOL.RAIO, 6)
+      expect(Math.hypot(...p)).toBeGreaterThan(25)
     }
-    const cores = luzes.map((l) => l.color.getHex())
-    expect(cores).toContain(0x7322f2)
-    expect(cores).toContain(0xe296ff)
+    // se move: duas amostras distantes diferem
+    const a = posicaoSol(0), b = posicaoSol(10)
+    expect(Math.hypot(b[0] - a[0], b[2] - a[2])).toBeGreaterThan(1)
+  })
+  it('órbita do sol é lenta (volta completa entre 60s e 120s)', () => {
+    const periodo = (Math.PI * 2) / COSMOS.SOL.VEL
+    expect(periodo).toBeGreaterThan(60)
+    expect(periodo).toBeLessThan(120)
+  })
+  it('halo acompanha a luz do sol', () => {
+    const sol = buildSol(1)
+    const halo = criarHaloSol(1)
+    expect(halo.name).toBe('sol-halo')
+    atualizarSol(sol, halo, 15, 1)
+    const p = posicaoSol(15)
+    expect(sol.position.toArray()).toEqual(p)
+    expect(halo.position.toArray()).toEqual(p)
   })
   it('névoas derivam devagar em torno da base (cosmos vivo)', () => {
     const grupo = buildCosmos()

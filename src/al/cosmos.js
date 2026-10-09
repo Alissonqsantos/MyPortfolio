@@ -33,11 +33,15 @@ export const COSMOS = {
     AMP: 2.5,   // deslocamento máximo (unidades de cena)
     VEL: 0.05,  // período ~2min — o cosmos respira, sem pressa
   },
-  // Luzes que amarram o Al ao cosmo: mesma direção das névoas.
-  LUZES: [
-    { COR: 0x7322f2, INT: 0.9, POS: [-22, 6, -24] },
-    { COR: 0xe296ff, INT: 0.5, POS: [24, -4, -20] },
-  ],
+  // Sol do cosmos: ENTIDADE ÚNICA de luz roxa em órbita — toda a luz roxa
+  // que banha o Al vem daqui (direção = posição do sol → origem).
+  // Fase inicial ≈ direção da antiga névoa violeta ([-22, 6, -24]).
+  SOL: {
+    COR: 0x7322f2, INT: 1.3,
+    RAIO: 28, ALTURA: 9, OSC: 4,
+    VEL: 0.08, FASE: 4.0, // órbita completa em ~79s
+    HALO_COR: [226, 150, 255], HALO_ESCALA: 7, HALO_OPAC: 0.85,
+  },
 };
 
 function mulberry32(seed) {
@@ -180,13 +184,45 @@ export function atualizarLinhaCadente(linha, cad, t) {
   linha.material.opacity = p.opacidade;
 }
 
-// Luzes que amarram o Al ao cosmo: mesma direção das névoas.
-export function buildLuzesCosmos(esc = 1) {
-  return COSMOS.LUZES.map((l) => {
-    const luz = new THREE.DirectionalLight(l.COR, l.INT);
-    luz.position.set(l.POS[0] * esc, l.POS[1] * esc, l.POS[2] * esc);
-    return luz;
+// Posição do sol no instante t (s): órbita circular de raio RAIO com a
+// altura oscilando entre ALTURA±OSC. Puro — testável em Node.
+export function posicaoSol(t) {
+  const S = COSMOS.SOL;
+  const a = t * S.VEL + S.FASE;
+  return [Math.cos(a) * S.RAIO, S.ALTURA + Math.sin(a) * S.OSC, Math.sin(a) * S.RAIO];
+}
+
+// O sol: UMA DirectionalLight roxa. A direção da luz no Al é sempre
+// (posição do sol → origem). A cena ativa castShadow nela.
+export function buildSol(esc = 1) {
+  const S = COSMOS.SOL;
+  const luz = new THREE.DirectionalLight(S.COR, S.INT);
+  const p = posicaoSol(0);
+  luz.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
+  return luz;
+}
+
+// Halo visível do sol (sprite aditivo lilás) — a entidade no céu.
+export function criarHaloSol(esc = 1) {
+  const S = COSMOS.SOL;
+  const mat = new THREE.SpriteMaterial({
+    map: nevoaTexture(S.HALO_COR), transparent: true, opacity: S.HALO_OPAC,
+    blending: THREE.AdditiveBlending, depthWrite: false,
   });
+  const halo = new THREE.Sprite(mat);
+  halo.name = 'sol-halo';
+  halo.frustumCulled = false;
+  const p = posicaoSol(0);
+  halo.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
+  halo.scale.set(S.HALO_ESCALA * esc, S.HALO_ESCALA * esc, 1);
+  return halo;
+}
+
+// Move sol + halo para o instante t (uma chamada por frame na cena).
+export function atualizarSol(luz, halo, t, esc = 1) {
+  const p = posicaoSol(t);
+  luz.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
+  halo.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
 }
 
 // Deriva de uma névoa no instante t: oscilação lenta em torno da base,
