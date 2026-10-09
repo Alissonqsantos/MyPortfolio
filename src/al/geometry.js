@@ -23,10 +23,10 @@ const CONFIG = {
 
   // -------- APARÊNCIA (material das letras) --------
   COR: 0x030303,        // cor quase-preto (visível no fundo preto)
-  ROUGH: 0.75,          // rugosidade (0 = espelho, 1 = fosco)
-  METAL: 0.15,          // metalicidade (0 = plástico, 1 = metal)   
+  ROUGH: 0.9,           // rugosidade (0 = espelho, 1 = fosco) — alta p/ apagar brilho
+  METAL: 0.1,           // metalicidade (0 = plástico, 1 = metal)
   BUMP: 0.1,          // relevo fino da superfície
-  CLEARCOAT: 0.1,      // verniz (brilho de camada por cima)
+  CLEARCOAT: 0.0,       // verniz desligado (era o verniz que mantinha o brilho)
   CLEARCOAT_ROUGH: 0.2, // rugosidade do verniz
   FUNDO: 0x000000,      // cor do fundo da cena
 
@@ -51,10 +51,10 @@ const CONFIG = {
 
   // -------- LUZES --------
   // Brancas em baixa intensidade (apoio) + roxas do cosmos (protagonistas).
-  LUZ_KEY:  { COR: 0xffffff, INT: 0.28, POS: [4, 7, 6] },   // principal (faz sombra)
-  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.28, POS: [-6, 2, 4] },  // preenchimento (azulado)
-  LUZ_RIM:  { COR: 0xffffff, INT: 0.4, POS: [-2, 4, -6] },  // contorno (atrás)
-  AMBIENTE: 0.01,     // reflexo do ambiente (RoomEnvironment) — contido
+  LUZ_KEY:  { COR: 0xffffff, INT: 0.15, POS: [4, 7, 6] },   // principal (faz sombra)
+  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.15, POS: [-6, 2, 4] },  // preenchimento (azulado)
+  LUZ_RIM:  { COR: 0xffffff, INT: 0.25, POS: [-2, 4, -6] },  // contorno (atrás)
+  AMBIENTE: 0.005,    // reflexo do ambiente (RoomEnvironment) — quase apagado
 
   // -------- SOMBRA --------
   SOMBRA_MAPA: 2048,  // resolução do mapa de sombra (maior = mais nítida)

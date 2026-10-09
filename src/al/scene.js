@@ -29,6 +29,7 @@ export function createAlScene(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.8;
 
   const cena = new THREE.Scene();
   cena.background = new THREE.Color(COSMOS.FUNDO);

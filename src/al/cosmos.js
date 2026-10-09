@@ -33,11 +33,10 @@ export const COSMOS = {
     AMP: 2.5,   // deslocamento máximo (unidades de cena)
     VEL: 0.05,  // período ~2min — o cosmos respira, sem pressa
   },
-  // Luzes que amarram o Al ao cosmo: mesma direção das névoas,
-  // intensidade baixa para não brigar com key/fill/rim aprovadas.
+  // Luzes que amarram o Al ao cosmo: mesma direção das névoas.
   LUZES: [
-    { COR: 0x7322f2, INT: 0.55, POS: [-22, 6, -24] },
-    { COR: 0xe296ff, INT: 0.28, POS: [24, -4, -20] },
+    { COR: 0x7322f2, INT: 0.4, POS: [-22, 6, -24] },
+    { COR: 0xe296ff, INT: 0.2, POS: [24, -4, -20] },
   ],
 };
 

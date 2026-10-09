@@ -11,6 +11,8 @@ describe('geometria do Al', () => {
     expect(CONFIG.L_ESPESSURA).toBe(0.7)
     expect(CONFIG.CANTO_RAIO).toBe(0.0)
     expect(CONFIG.COR).toBe(0x030303)
+    expect(CONFIG.ROUGH).toBeGreaterThanOrEqual(0.85)
+    expect(CONFIG.CLEARCOAT).toBe(0)
   })
   it('gera as duas geometrias sem vértices não-finitos', () => {
     const { aGeo, lGeo } = getGeometrias()
@@ -27,7 +29,7 @@ describe('geometria do Al', () => {
     expect(bb.max.y - bb.min.y).toBeCloseTo(CONFIG.ALTURA, 0)
   })
   it('brancas são só apoio (baixas) e o roxo do cosmos protagoniza', () => {
-    expect(CONFIG.LUZ_KEY.INT).toBeLessThanOrEqual(0.5)
+    expect(CONFIG.LUZ_KEY.INT).toBeLessThanOrEqual(0.3)
     expect(CONFIG.LUZ_FILL.INT).toBeLessThanOrEqual(0.5)
     expect(CONFIG.LUZ_RIM.INT).toBeLessThanOrEqual(0.6)
     expect(CONFIG.AMBIENTE).toBeLessThanOrEqual(0.02)
