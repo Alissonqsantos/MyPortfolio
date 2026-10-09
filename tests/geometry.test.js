@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CONFIG, getGeometrias, buildAl } from '../src/al/geometry.js'
-import { COSMOS, buildSol } from '../src/al/cosmos.js'
+import { buildSol } from '../src/al/cosmos.js'
 import * as THREE from 'three'
 
 const finito = (arr) => arr.every(Number.isFinite)
