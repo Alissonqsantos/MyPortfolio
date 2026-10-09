@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
 import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol } from './cosmos.js';
+import { buildBuracoNegro, atualizarBuracoNegro } from './buracoNegro.js';
 import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
@@ -38,6 +39,9 @@ export function createAlScene(canvas) {
   const estrelas = cosmos.getObjectByName('estrelas');
   const cadente = criarLinhaCadente();
   cena.add(cadente);
+  // Buraco negro lateral: auto-emissivo, não toca na iluminação.
+  const buraco = buildBuracoNegro();
+  cena.add(buraco);
 
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
@@ -175,6 +179,8 @@ export function createAlScene(canvas) {
       estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
       // Sol em órbita (luz invisível): a luz roxa no Al vem sempre da posição dele.
       atualizarSol(sol, relogio.elapsedTime, ESC);
+      // Buraco negro: giro diferencial + cintilação sutil.
+      atualizarBuracoNegro(buraco, relogio.elapsedTime);
       // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
       if (cadAtiva) {
         tCad += dt;
