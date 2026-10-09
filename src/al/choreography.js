@@ -6,9 +6,9 @@ const smoothstep = (x) => x * x * (3 - 2 * x);
 
 export const CHAPTERS = [
   { n: '01', word: 'IDENTITY', pose: { pos: [1.8, 1.8, 7.5], target: [-0.6, 0.2, 0.0] } },
-  { n: '02', word: 'CRAFT',    pose: { pos: [1.2, -1.5, 6.5], target: [-0.3, 1.0, 0.0] } },
-  { n: '03', word: 'DETAIL',   pose: { pos: [0.2, 2.2, 3.0],  target: [-0.8, 2.0, 0.0] } },
-  { n: '04', word: 'SYSTEMS',  pose: { pos: [1.0, 6.0, 4.0], target: [0.0, 0.0, 0.0] } },
+  { n: '02', word: 'CRAFT',    pose: { pos: [3.0, -2.8, 5.0], target: [-0.6, 1.6, 0.0] } },
+  { n: '03', word: 'DETAIL',   pose: { pos: [6.0, 2.0, 2.5],  target: [-0.8, 1.8, 0.0] } },
+  { n: '04', word: 'SYSTEMS',  pose: { pos: [-1.5, 7.5, 3.0], target: [0.0, 0.3, 0.0] } },
   { n: '05', word: 'IMPACT',   pose: { pos: [0.0, 1.5, 12.0], target: [0.0, 0.3, 0.0] } },
 ];
 
