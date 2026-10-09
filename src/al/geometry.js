@@ -50,10 +50,8 @@ const CONFIG = {
   },
 
   // -------- LUZES --------
-  LUZ_KEY:  { COR: 0xffffff, INT: 0.35, POS: [4, 7, 6] },   // residual (só p/ sombra)
-  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.35, POS: [-6, 2, 4] },  // preenchimento (azulado, contido)
-  LUZ_RIM:  { COR: 0xffffff, INT: 0.5, POS: [-2, 4, -6] },  // contorno (atrás, contido)
-  AMBIENTE: 0.015,    // reflexo do ambiente (RoomEnvironment) — contido p/ o Al escurecer
+  // A cena usa SÓ as luzes roxas do cosmos (src/al/cosmos.js — COSMOS.LUZES).
+  // Nenhuma luz branca/neutra nem ambiente neutro no projeto.
 
   // -------- SOMBRA --------
   SOMBRA_MAPA: 2048,  // resolução do mapa de sombra (maior = mais nítida)

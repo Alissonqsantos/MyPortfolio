@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { CONFIG, getGeometrias, buildAl } from '../src/al/geometry.js'
+import { COSMOS, buildLuzesCosmos } from '../src/al/cosmos.js'
 import * as THREE from 'three'
 
 const finito = (arr) => arr.every(Number.isFinite)
@@ -24,5 +25,17 @@ describe('geometria do Al', () => {
     expect(g.getObjectByName('letraL')).toBeTruthy()
     const bb = new THREE.Box3().setFromObject(g)
     expect(bb.max.y - bb.min.y).toBeCloseTo(CONFIG.ALTURA, 0)
+  })
+  it('não tem nenhuma luz branca/neutra — só roxo do cosmos', () => {
+    expect(CONFIG.LUZ_KEY).toBeUndefined()
+    expect(CONFIG.LUZ_FILL).toBeUndefined()
+    expect(CONFIG.LUZ_RIM).toBeUndefined()
+    expect(CONFIG.AMBIENTE).toBeUndefined()
+    for (const l of buildLuzesCosmos(1)) {
+      // roxo/violeta/lilás: vermelho+azul dominam, verde fica baixo
+      const c = l.color
+      expect(c.r + c.b).toBeGreaterThan(c.g * 2)
+    }
+    expect(COSMOS.LUZES.length).toBeGreaterThanOrEqual(2)
   })
 })
