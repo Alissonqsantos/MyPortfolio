@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
 import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildLuzesCosmos } from './cosmos.js';
 import { prefereReduzirMovimento } from './webgl.js';
@@ -40,17 +41,29 @@ export function createAlScene(canvas) {
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
 
-  // Só luz do cosmos (roxa): nenhuma branca/neutra na cena.
+  // Roxas do cosmos (protagonistas) + brancas em baixa intensidade (apoio).
+  let cenaEnv = null;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  cenaEnv = pmrem.fromScene(new RoomEnvironment(renderer), CONFIG.AMBIENTE);
+  cena.environment = cenaEnv.texture;
+
   const mobile = typeof innerWidth !== 'undefined' && innerWidth < 768;
   const sombraRes = mobile ? CONFIG.SOMBRA_MAPA / 2 : CONFIG.SOMBRA_MAPA;
 
-  const cosmosLuzes = buildLuzesCosmos(ESC);
-  const sombra = cosmosLuzes[0];
-  sombra.castShadow = true;
-  sombra.shadow.mapSize.set(sombraRes, sombraRes);
-  sombra.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; sombra.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
-  sombra.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; sombra.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
-  for (const l of cosmosLuzes) cena.add(l);
+  const key = new THREE.DirectionalLight(CONFIG.LUZ_KEY.COR, CONFIG.LUZ_KEY.INT);
+  key.position.set(...CONFIG.LUZ_KEY.POS).multiplyScalar(ESC);
+  key.castShadow = true;
+  key.shadow.mapSize.set(sombraRes, sombraRes);
+  key.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; key.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
+  key.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; key.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
+  cena.add(key);
+  const fill = new THREE.DirectionalLight(CONFIG.LUZ_FILL.COR, CONFIG.LUZ_FILL.INT);
+  fill.position.set(...CONFIG.LUZ_FILL.POS).multiplyScalar(ESC);
+  cena.add(fill);
+  const rim = new THREE.DirectionalLight(CONFIG.LUZ_RIM.COR, CONFIG.LUZ_RIM.INT);
+  rim.position.set(...CONFIG.LUZ_RIM.POS).multiplyScalar(ESC);
+  cena.add(rim);
+  for (const l of buildLuzesCosmos(ESC)) cena.add(l);
 
   const modelo = buildAl(makeLetterMaterial(), makeLetterMaterial());
   modelo.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -204,6 +217,8 @@ export function createAlScene(canvas) {
           m.dispose();
         }
       });
+      pmrem.dispose();
+      if (cenaEnv) cenaEnv.dispose();
       renderer.dispose();
     },
   };

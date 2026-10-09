@@ -26,11 +26,11 @@ describe('geometria do Al', () => {
     const bb = new THREE.Box3().setFromObject(g)
     expect(bb.max.y - bb.min.y).toBeCloseTo(CONFIG.ALTURA, 0)
   })
-  it('não tem nenhuma luz branca/neutra — só roxo do cosmos', () => {
-    expect(CONFIG.LUZ_KEY).toBeUndefined()
-    expect(CONFIG.LUZ_FILL).toBeUndefined()
-    expect(CONFIG.LUZ_RIM).toBeUndefined()
-    expect(CONFIG.AMBIENTE).toBeUndefined()
+  it('brancas são só apoio (baixas) e o roxo do cosmos protagoniza', () => {
+    expect(CONFIG.LUZ_KEY.INT).toBeLessThanOrEqual(0.5)
+    expect(CONFIG.LUZ_FILL.INT).toBeLessThanOrEqual(0.5)
+    expect(CONFIG.LUZ_RIM.INT).toBeLessThanOrEqual(0.6)
+    expect(CONFIG.AMBIENTE).toBeLessThanOrEqual(0.02)
     for (const l of buildLuzesCosmos(1)) {
       // roxo/violeta/lilás: vermelho+azul dominam, verde fica baixo
       const c = l.color
