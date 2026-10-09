@@ -18,7 +18,7 @@ export const COSMOS = {
   // (inclusive a 04, que olha de trás para frente).
   NEVOAS: [
     { cor: [115, 34, 242], opacidade: 0.16, pos: [-22, 6, -24], escala: 34 },
-    { cor: [226, 150, 255], opacidade: 0.12, pos: [24, -4, -20], escala: 28 },
+    { cor: [168, 85, 255], opacidade: 0.12, pos: [24, -4, -20], escala: 28 },
     { cor: [0, 0, 96], opacidade: 0.20, pos: [0, 18, 20], escala: 44 },
     { cor: [151, 128, 255], opacidade: 0.10, pos: [-6, -10, 26], escala: 30 },
   ],
@@ -40,7 +40,7 @@ export const COSMOS = {
     COR: 0x7322f2, INT: 1.3,
     RAIO: 28, ALTURA: 9, OSC: 4,
     VEL: 0.08, FASE: 4.0, // órbita completa em ~79s
-    HALO_COR: [226, 150, 255], HALO_ESCALA: 7, HALO_OPAC: 0.85,
+    HALO_COR: [150, 60, 255], HALO_ESCALA: 6, HALO_OPAC: 0.55,
   },
 };
 
