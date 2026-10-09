@@ -34,8 +34,10 @@ export function createAlScene(canvas) {
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
 
+  let cenaEnv = null;
   const pmrem = new THREE.PMREMGenerator(renderer);
-  cena.environment = pmrem.fromScene(new RoomEnvironment(renderer), CONFIG.AMBIENTE).texture;
+  cenaEnv = pmrem.fromScene(new RoomEnvironment(renderer), CONFIG.AMBIENTE);
+  cena.environment = cenaEnv.texture;
 
   const mobile = typeof innerWidth !== 'undefined' && innerWidth < 768;
   const sombraRes = mobile ? CONFIG.SOMBRA_MAPA / 2 : CONFIG.SOMBRA_MAPA;
@@ -176,6 +178,7 @@ export function createAlScene(canvas) {
         for (const m of mats) if (!liberados.has(m)) { liberados.add(m); m.dispose(); }
       });
       pmrem.dispose();
+      if (cenaEnv) cenaEnv.dispose();
       renderer.dispose();
     },
   };
