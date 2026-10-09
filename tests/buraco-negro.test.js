@@ -62,10 +62,11 @@ describe('buraco negro', () => {
   })
   it('mora longe: 16+ da origem e fora do caminho da câmera (margem 1.0)', () => {
     expect(Math.hypot(...BURACO.POS)).toBeGreaterThanOrEqual(16)
+    const raioBH = BURACO.DISCO_EXT * BURACO.ESCALA
     for (let i = 0; i <= 400; i++) {
       const p = poseAt(i / 400)
       const d = Math.hypot(p.pos[0] - BURACO.POS[0], p.pos[1] - BURACO.POS[1], p.pos[2] - BURACO.POS[2])
-      expect(d, `t=${(i / 400).toFixed(3)}`).toBeGreaterThan(BURACO.DISCO_EXT + 1.0)
+      expect(d, `t=${(i / 400).toFixed(3)}`).toBeGreaterThan(raioBH + 1.0)
     }
   })
   it('em t=0 está no repouso (giro zero, opacidades na base)', () => {
@@ -89,5 +90,18 @@ describe('buraco negro', () => {
   })
   it('giro é lento (núcleo leva 60s+ por volta)', () => {
     expect((Math.PI * 2) / BURACO.GIRO_NUCLEO).toBeGreaterThan(60)
+  })
+  it('knobs de personalização têm defaults sãos', () => {
+    for (const k of ['OPAC_NUCLEO', 'OPAC_DISCO', 'VEU_OPAC', 'ARCO_OPAC_SUP', 'ARCO_OPAC_INF']) {
+      expect(BURACO[k]).toBeGreaterThanOrEqual(0)
+      expect(BURACO[k]).toBeLessThanOrEqual(1)
+    }
+    expect(BURACO.BRILHO).toBeGreaterThan(0)
+    expect(BURACO.ESCALA).toBeGreaterThan(0)
+    expect(BURACO.FILAMENTOS).toBeGreaterThanOrEqual(0)
+    expect(BURACO.QUEDA).toBeGreaterThan(0)
+    const b = buildBuracoNegro()
+    expect(b.visible).toBe(BURACO.VISIVEL)
+    expect(b.scale.x).toBeCloseTo(BURACO.ESCALA, 6)
   })
 })
