@@ -9,7 +9,7 @@ export const CHAPTERS = [
   { n: '02', word: 'CRAFT',    pose: { pos: [-5.6, -2.9, 4.5], target: [-2.0, -1.2, 0.0] } },
   { n: '03', word: 'DETAIL',   pose: { pos: [3.0, -2.2, 6.0],  target: [-0.5, 1.5, 0.0] } },
   { n: '04', word: 'SYSTEMS',  pose: { pos: [-0.8, 5.2, -5.8], target: [0.0, 0.3, 0.0] } },
-  { n: '05', word: 'IMPACT',   pose: { pos: [2.0, 12.0, 12.0], target: [0.0, 0.0, 0.0] } },
+  { n: '05', word: 'IMPACT',   pose: { pos: [-1.8, 1.8, 7.5], target: [0.6, 0.2, 0.0] } },
 ];
 
 export function chapterIndexFor(t) {
