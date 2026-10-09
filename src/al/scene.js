@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
-import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildSol, criarHaloSol, atualizarSol } from './cosmos.js';
+import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol } from './cosmos.js';
 import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
@@ -67,8 +67,6 @@ export function createAlScene(canvas) {
   sol.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
   sol.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
   cena.add(sol);
-  const haloSol = criarHaloSol(ESC);
-  cena.add(haloSol);
 
   const modelo = buildAl(makeLetterMaterial(), makeLetterMaterial());
   modelo.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
@@ -175,10 +173,8 @@ export function createAlScene(canvas) {
     if (!estatico) {
       // Deriva quase parada: volta completa em ~42min.
       estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
-      // Névoas à deriva: o cosmos respira (período ~2min).
-      atualizarNevoas(cosmos, relogio.elapsedTime);
-      // Sol em órbita: a luz roxa no Al vem sempre da posição dele.
-      atualizarSol(sol, haloSol, relogio.elapsedTime, ESC);
+      // Sol em órbita (luz invisível): a luz roxa no Al vem sempre da posição dele.
+      atualizarSol(sol, relogio.elapsedTime, ESC);
       // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
       if (cadAtiva) {
         tCad += dt;

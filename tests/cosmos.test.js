@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import * as THREE from 'three'
-import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarNevoas, buildSol, posicaoSol, criarHaloSol, atualizarSol, semente } from '../src/al/cosmos.js'
+import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol, posicaoSol, semente } from '../src/al/cosmos.js'
 
 describe('fundo cósmico', () => {
   it('gera 900 estrelas dentro da casca 40-60', () => {
@@ -20,21 +19,10 @@ describe('fundo cósmico', () => {
     const b = buildCosmos().children.find((o) => o.isPoints).geometry.attributes.position.array
     expect([...a]).toEqual([...b])
   })
-  it('tem 4 névoas aditivas tênues nas cores Superconscious', () => {
+  it('não tem sprites visíveis (sem manchas no céu — só estrelas)', () => {
     const c = buildCosmos()
-    const nevs = c.children.filter((o) => o.isSprite)
-    expect(nevs).toHaveLength(4)
-    for (const s of nevs) {
-      expect(s.material.blending).toBe(THREE.AdditiveBlending)
-      expect(s.material.opacity).toBeLessThanOrEqual(0.2)
-      expect(s.material.map).toBeTruthy()
-    }
-  })
-  it('mora longe da câmera (raio 25+, câmera a 6-8)', () => {
-    const c = buildCosmos()
-    for (const s of c.children.filter((o) => o.isSprite)) {
-      expect(s.position.length()).toBeGreaterThan(25)
-    }
+    expect(c.children.filter((o) => o.isSprite)).toHaveLength(0)
+    expect(c.children.filter((o) => o.isPoints)).toHaveLength(1)
   })
   it('deriva quase parada (volta completa em mais de 30min)', () => {
     expect((Math.PI * 2) / COSMOS.DERIVA).toBeGreaterThan(30 * 60)
@@ -98,32 +86,9 @@ describe('fundo cósmico', () => {
     expect(periodo).toBeGreaterThan(60)
     expect(periodo).toBeLessThan(120)
   })
-  it('halo acompanha a luz do sol', () => {
+  it('o sol é só luz (sem corpo visível): atualizarSol move apenas a luz', () => {
     const sol = buildSol(1)
-    const halo = criarHaloSol(1)
-    expect(halo.name).toBe('sol-halo')
-    atualizarSol(sol, halo, 15, 1)
-    const p = posicaoSol(15)
-    expect(sol.position.toArray()).toEqual(p)
-    expect(halo.position.toArray()).toEqual(p)
-  })
-  it('névoas derivam devagar em torno da base (cosmos vivo)', () => {
-    const grupo = buildCosmos()
-    const nevoas = grupo.children.filter((o) => o.name.startsWith('nevoa'))
-    expect(nevoas).toHaveLength(COSMOS.NEVOAS.length)
-    atualizarNevoas(grupo, 0)
-    nevoas.forEach((n, i) => {
-      expect(n.position.toArray()).toEqual(COSMOS.NEVOAS[i].pos)
-    })
-    atualizarNevoas(grupo, 30)
-    nevoas.forEach((n, i) => {
-      const base = COSMOS.NEVOAS[i].pos
-      const d = Math.hypot(n.position.x - base[0], n.position.y - base[1])
-      // oscilação senoidal: deslocamento limitado a ~2.4x a amplitude
-      expect(d).toBeLessThanOrEqual(COSMOS.NEVOA_DERIVA.AMP * 2.5)
-    })
-  })
-  it('deriva das névoas é lenta (período acima de 1min)', () => {
-    expect((Math.PI * 2) / COSMOS.NEVOA_DERIVA.VEL).toBeGreaterThan(60)
+    atualizarSol(sol, 15, 1)
+    expect(sol.position.toArray()).toEqual(posicaoSol(15))
   })
 })

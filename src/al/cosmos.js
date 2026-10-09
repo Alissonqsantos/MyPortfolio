@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 
-// Fundo cósmico do hero — tokens reais do design system Superconscious do vault:
-// deep #000060, violeta #7322F2, lilás #E296FF, névoa #F4D6FF, lavanda #9780FF.
-// Deriva lenta nas estrelas e névoas + cadentes ocasionais. Tudo paramétrico
-// e desligado sob prefers-reduced-motion. Módulo puro — sem renderer/DOM
-// (nebulosa via DataTexture). Testável em Node.
+// Fundo cósmico do hero — céu limpo: só estrelas + cadentes ocasionais.
+// Sem sprites visíveis (sem névoas, sem halo): nenhuma mancha no céu.
+// A luz roxa do sol continua banhando o Al (luz invisível, sem corpo).
+// Tudo paramétrico e desligado sob prefers-reduced-motion.
+// Módulo puro — sem renderer/DOM. Testável em Node.
 export const COSMOS = {
   FUNDO: 0x0c0b0c,
   ESTRELAS: 900,
@@ -16,12 +16,6 @@ export const COSMOS = {
   DERIVA: 0.0025, // rad/s — volta completa em ~42min (quase parada)
   // Distribuídas ao redor da cena para cobrir as 5 poses da coreografia
   // (inclusive a 04, que olha de trás para frente).
-  NEVOAS: [
-    { cor: [115, 34, 242], opacidade: 0.16, pos: [-22, 6, -24], escala: 34 },
-    { cor: [168, 85, 255], opacidade: 0.12, pos: [24, -4, -20], escala: 28 },
-    { cor: [0, 0, 96], opacidade: 0.20, pos: [0, 18, 20], escala: 44 },
-    { cor: [151, 128, 255], opacidade: 0.10, pos: [-6, -10, 26], escala: 30 },
-  ],
   CADENTE: {
     ESPERA_MIN: 5, ESPERA_MAX: 13,    // uma a cada 5–13s
     DUR_MIN: 0.5, DUR_MAX: 0.9,      // rastro bem rápido
@@ -29,18 +23,13 @@ export const COSMOS = {
     OPAC_MAX: 0.5,                   // tênue, não chama atenção
     RAIO_MIN: 42, RAIO_MAX: 50,      // longe das letras e da câmera
   },
-  NEVOA_DERIVA: {
-    AMP: 2.5,   // deslocamento máximo (unidades de cena)
-    VEL: 0.05,  // período ~2min — o cosmos respira, sem pressa
-  },
   // Sol do cosmos: ENTIDADE ÚNICA de luz roxa em órbita — toda a luz roxa
   // que banha o Al vem daqui (direção = posição do sol → origem).
-  // Fase inicial ≈ direção da antiga névoa violeta ([-22, 6, -24]).
+  // Luz invisível (sem corpo visível no céu): só ilumina, não aparece.
   SOL: {
     COR: 0x7322f2, INT: 1.3,
     RAIO: 28, ALTURA: 9, OSC: 4,
     VEL: 0.08, FASE: 4.0, // órbita completa em ~79s
-    HALO_COR: [150, 60, 255], HALO_ESCALA: 6, HALO_OPAC: 0.55,
   },
 };
 
@@ -57,23 +46,6 @@ export function semente(n) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
-
-function nevoaTexture([r, g, b], tam = 128) {
-  const data = new Uint8Array(tam * tam * 4);
-  const c = tam / 2;
-  for (let y = 0; y < tam; y++) {
-    for (let x = 0; x < tam; x++) {
-      const d = Math.hypot(x - c + 0.5, y - c + 0.5) / c;
-      const queda = Math.max(0, 1 - d) ** 2;
-      const i = (y * tam + x) * 4;
-      data[i] = r; data[i + 1] = g; data[i + 2] = b;
-      data[i + 3] = Math.round(255 * queda);
-    }
-  }
-  const tex = new THREE.DataTexture(data, tam, tam);
-  tex.needsUpdate = true;
-  return tex;
 }
 
 export function buildCosmos() {
@@ -101,19 +73,6 @@ export function buildCosmos() {
   estrelas.frustumCulled = false;
   grupo.add(estrelas);
 
-  COSMOS.NEVOAS.forEach((n, i) => {
-    const smat = new THREE.SpriteMaterial({
-      map: nevoaTexture(n.cor), transparent: true, opacity: n.opacidade,
-      blending: THREE.AdditiveBlending, depthWrite: false,
-    });
-    const spr = new THREE.Sprite(smat);
-    spr.name = `nevoa-${i}`;
-    spr.userData.base = [...n.pos];
-    spr.userData.indice = i;
-    spr.position.set(...n.pos);
-    spr.scale.set(n.escala, n.escala, 1);
-    grupo.add(spr);
-  });
   return grupo;
 }
 
@@ -202,45 +161,9 @@ export function buildSol(esc = 1) {
   return luz;
 }
 
-// Halo visível do sol (sprite aditivo lilás) — a entidade no céu.
-export function criarHaloSol(esc = 1) {
-  const S = COSMOS.SOL;
-  const mat = new THREE.SpriteMaterial({
-    map: nevoaTexture(S.HALO_COR), transparent: true, opacity: S.HALO_OPAC,
-    blending: THREE.AdditiveBlending, depthWrite: false,
-  });
-  const halo = new THREE.Sprite(mat);
-  halo.name = 'sol-halo';
-  halo.frustumCulled = false;
-  const p = posicaoSol(0);
-  halo.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
-  halo.scale.set(S.HALO_ESCALA * esc, S.HALO_ESCALA * esc, 1);
-  return halo;
-}
-
-// Move sol + halo para o instante t (uma chamada por frame na cena).
-export function atualizarSol(luz, halo, t, esc = 1) {
+// Move o sol para o instante t (uma chamada por frame na cena).
+// Só a luz se move — não há corpo visível no céu.
+export function atualizarSol(luz, t, esc = 1) {
   const p = posicaoSol(t);
   luz.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
-  halo.position.set(p[0] * esc, p[1] * esc, p[2] * esc);
-}
-
-// Deriva de uma névoa no instante t: oscilação lenta em torno da base,
-// zero em t=0 (fases distintas por índice p/ movimento orgânico).
-export function derivaNevoa(base, t, i) {
-  const { AMP: A, VEL: V } = COSMOS.NEVOA_DERIVA;
-  const fx = i * 1.7, fy = i * 2.9;
-  return [
-    base[0] + (Math.sin(t * V + fx) - Math.sin(fx)) * A,
-    base[1] + (Math.sin(t * V * 0.8 + fy) - Math.sin(fy)) * A * 0.6,
-    base[2],
-  ];
-}
-
-// Aplica a deriva às névoas do grupo (uma chamada por frame na cena).
-export function atualizarNevoas(grupo, t) {
-  for (const o of grupo.children) {
-    if (!o.name.startsWith('nevoa')) continue;
-    o.position.set(...derivaNevoa(o.userData.base, t, o.userData.indice));
-  }
 }
