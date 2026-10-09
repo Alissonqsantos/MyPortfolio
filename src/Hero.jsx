@@ -3,6 +3,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { HERO } from './hero-copy.js';
 import { createAlScene } from './al/scene.js';
+import { temWebGL, prefereReduzirMovimento } from './al/webgl.js';
 import { CHAPTERS, chapterIndexFor } from './al/choreography.js';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -13,13 +14,18 @@ export default function Hero() {
   const sceneRef = useRef(null);
   const [capitulo, setCapitulo] = useState(0);
   const [reduced, setReduced] = useState(false);
+  const [semGL, setSemGL] = useState(false);
 
   useEffect(() => {
+    if (!temWebGL()) {
+      setSemGL(true);
+      return;
+    }
     const scene = createAlScene(canvasRef.current);
     sceneRef.current = scene;
     scene.setProgress(0);
     let st = null;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (prefereReduzirMovimento()) {
       setReduced(true);
     } else {
       st = ScrollTrigger.create({
@@ -53,7 +59,7 @@ export default function Hero() {
   return (
     <section className="hero" ref={heroRef}>
       <div className="hero-canvas-wrap" aria-hidden="true">
-        <canvas ref={canvasRef} />
+        {semGL ? <div className="hero-al-fallback">Al</div> : <canvas ref={canvasRef} />}
       </div>
       <div className="hero-ident">
         <h1>{HERO.nome}</h1>
