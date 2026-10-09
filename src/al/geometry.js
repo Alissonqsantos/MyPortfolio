@@ -51,10 +51,10 @@ const CONFIG = {
 
   // -------- LUZES --------
   // Brancas em baixa intensidade (apoio) + roxas do cosmos (protagonistas).
-  LUZ_KEY:  { COR: 0xffffff, INT: 0.35, POS: [4, 7, 6] },   // principal (faz sombra)
-  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.35, POS: [-6, 2, 4] },  // preenchimento (azulado)
-  LUZ_RIM:  { COR: 0xffffff, INT: 0.5, POS: [-2, 4, -6] },  // contorno (atrás)
-  AMBIENTE: 0.015,    // reflexo do ambiente (RoomEnvironment) — contido
+  LUZ_KEY:  { COR: 0xffffff, INT: 0.28, POS: [4, 7, 6] },   // principal (faz sombra)
+  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.28, POS: [-6, 2, 4] },  // preenchimento (azulado)
+  LUZ_RIM:  { COR: 0xffffff, INT: 0.4, POS: [-2, 4, -6] },  // contorno (atrás)
+  AMBIENTE: 0.01,     // reflexo do ambiente (RoomEnvironment) — contido
 
   // -------- SOMBRA --------
   SOMBRA_MAPA: 2048,  // resolução do mapa de sombra (maior = mais nítida)
