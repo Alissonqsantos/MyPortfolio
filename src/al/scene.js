@@ -1,8 +1,9 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
-import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol } from './cosmos.js';
+import { COSMOS, buildCosmos, buildNebulosa, atualizarNebulosa, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol } from './cosmos.js';
 import { buildBuracoNegro, atualizarBuracoNegro } from './buracoNegro.js';
+import { obterSessao, tempoDaSessao } from './sessao.js';
 import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
@@ -17,7 +18,9 @@ export function applyProgress(t, camera, target) {
   camera.lookAt(target);
 }
 
-function makeLetterMaterial() {
+// Material das letras: base quase-preta fosca + PELÍCULA FINA (clearcoat)
+// que reflete um pouco da luz roxa que vem do buraco negro.
+export function makeLetterMaterial() {
   return new THREE.MeshPhysicalMaterial({
     color: CONFIG.COR, roughness: CONFIG.ROUGH, metalness: CONFIG.METAL,
     clearcoat: CONFIG.CLEARCOAT, clearcoatRoughness: CONFIG.CLEARCOAT_ROUGH, bumpScale: CONFIG.BUMP
@@ -32,15 +35,26 @@ export function createAlScene(canvas) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 0.8;
 
+  // Sessão do navegador: preset das estrelas (seed) + ângulo inicial da órbita
+  // do buraco negro (fase). F5 mantém tudo e o relógio continua; fechar e
+  // abrir o navegador sorteia preset e ângulo novos.
+  const sessao = obterSessao();
+
   const cena = new THREE.Scene();
   cena.background = new THREE.Color(COSMOS.FUNDO);
-  const cosmos = buildCosmos();
+  // Nebulosas: esfera de céu gigante (névoa contínua) — atrás de tudo.
+  let nebulosa = null;
+  if (COSMOS.NEBULOSA.ATIVO) {
+    nebulosa = buildNebulosa(sessao.seed);
+    cena.add(nebulosa);
+  }
+  const cosmos = buildCosmos(sessao.seed);
   cena.add(cosmos);
   const estrelas = cosmos.getObjectByName('estrelas');
   const cadente = criarLinhaCadente();
   cena.add(cadente);
   // Buraco negro lateral: auto-emissivo, não toca na iluminação.
-  const buraco = buildBuracoNegro();
+  const buraco = buildBuracoNegro(sessao.fase);
   cena.add(buraco);
 
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
@@ -64,8 +78,8 @@ export function createAlScene(canvas) {
   const rim = new THREE.DirectionalLight(CONFIG.LUZ_RIM.COR, CONFIG.LUZ_RIM.INT);
   rim.position.set(...CONFIG.LUZ_RIM.POS).multiplyScalar(ESC);
   cena.add(rim);
-  // A sombra do Al vem do sol — ela se move com ele.
-  const sol = buildSol(ESC);
+  // A sombra do Al vem da luz do buraco negro — ela se move com ele.
+  const sol = buildSol(ESC, sessao.fase);
   sol.castShadow = true;
   sol.shadow.mapSize.set(sombraRes, sombraRes);
   sol.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
@@ -91,14 +105,18 @@ export function createAlScene(canvas) {
     malha.userData.tombo = new THREE.Vector3();
   }
 
-  const chao = new THREE.Mesh(
-    new THREE.PlaneGeometry(CONFIG.CHAO_TAM, CONFIG.CHAO_TAM),
-    new THREE.ShadowMaterial({ opacity: CONFIG.CHAO_OPACIDADE })
-  );
-  chao.rotation.x = -Math.PI / 2;
-  chao.position.y = CONFIG.CHAO_Y * ESC;
-  chao.receiveShadow = true;
-  cena.add(chao);
+  // Al à deriva no espaço: sem chão, sem sombra projetada.
+  // (Para reativar o chão antigo: CHAO_ATIVO: true no CONFIG.)
+  if (CONFIG.CHAO_ATIVO) {
+    const chao = new THREE.Mesh(
+      new THREE.PlaneGeometry(CONFIG.CHAO_TAM, CONFIG.CHAO_TAM),
+      new THREE.ShadowMaterial({ opacity: CONFIG.CHAO_OPACIDADE })
+    );
+    chao.rotation.x = -Math.PI / 2;
+    chao.position.y = CONFIG.CHAO_Y * ESC;
+    chao.receiveShadow = true;
+    cena.add(chao);
+  }
 
   // Hover-push: mesma matemática do Al3D. O ponteiro é normalizado pelo
   // retângulo do canvas (não pela janela), pois o canvas não é fullscreen.
@@ -163,6 +181,10 @@ export function createAlScene(canvas) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     renderer.setSize(w, h, false);
+    // Tamanho dos pontos das estrelas: px = tamanho * uEscala / distância.
+    estrelas.material.uniforms.uEscala.value =
+      COSMOS.ESCALA_PONTOS * (h * renderer.getPixelRatio()) /
+      (2 * Math.tan((CONFIG.FOV * Math.PI) / 360));
   }
 
   let rafId = 0;
@@ -175,12 +197,15 @@ export function createAlScene(canvas) {
     applyProgress(tAtual, camera, alvo);
     atualizarEmpurrao(dt);
     if (!estatico) {
+      // Relógio da sessão: no F5 continua de onde estava (nada reinicia).
+      const t = tempoDaSessao(sessao);
+      // Nebulosas: deriva própria, mais lenta que as estrelas.
+      if (nebulosa) atualizarNebulosa(nebulosa, t);
       // Deriva quase parada: volta completa em ~42min.
-      estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
-      // Sol em órbita (luz invisível): a luz roxa no Al vem sempre da posição dele.
-      atualizarSol(sol, relogio.elapsedTime, ESC);
-      // Buraco negro: giro diferencial + cintilação sutil.
-      atualizarBuracoNegro(buraco, relogio.elapsedTime);
+      estrelas.rotation.y = anguloDeriva(t);
+      // Buraco negro na órbita + luz roxa nascendo dele (se move com ele).
+      atualizarBuracoNegro(buraco, t);
+      atualizarSol(sol, t, ESC, sessao.fase);
       // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
       if (cadAtiva) {
         tCad += dt;

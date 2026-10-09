@@ -1,17 +1,16 @@
 import { describe, it, expect } from 'vitest'
-import { BURACO, corDisco, lamela, buildBuracoNegro, atualizarBuracoNegro } from '../src/al/buracoNegro.js'
-import { poseAt } from '../src/al/choreography.js'
+import * as THREE from 'three'
+import { BURACO, buildBuracoNegro, atualizarBuracoNegro, makeDiskMaterial, makeAuraMaterial, posicaoOrbita } from '../src/al/buracoNegro.js'
+import { CHAPTERS, poseAt } from '../src/al/choreography.js'
 
-const finito3 = (v) => v.length === 3 && v.every(Number.isFinite)
-
-describe('buraco negro', () => {
-  it('tem horizonte + corpo + glows + peles + fóton + aura + arcos, nomeados', () => {
+describe('buraco negro (port 3D)', () => {
+  it('tem horizonte + disco + aura, nomeados', () => {
     const b = buildBuracoNegro()
     expect(b.name).toBe('buraco-negro')
-    for (const n of ['horizonte', 'miolo', 'nucleo', 'disco', 'veu', 'pele-sup', 'pele-inf', 'foton', 'aura', 'arco-sup', 'arco-inf']) {
+    for (const n of ['horizonte', 'disco', 'aura']) {
       expect(b.getObjectByName(n), n).toBeTruthy()
     }
-    expect(b.children).toHaveLength(11)
+    expect(b.children).toHaveLength(3)
   })
   it('horizonte é esfera preta opaca (oclusor, sem emissão)', () => {
     const h = buildBuracoNegro().getObjectByName('horizonte')
@@ -19,123 +18,157 @@ describe('buraco negro', () => {
     expect(h.material.color.getHex()).toBe(0x000000)
     expect(h.material.transparent).toBeFalsy()
   })
-  it('emissão nasce afundada na sombra (estilo Gargantua)', () => {
-    expect(BURACO.DISCO_INT).toBeLessThanOrEqual(BURACO.ESFERA_R)
+  it('disco nasce colado na sombra e termina longe', () => {
+    expect(BURACO.DISCO_INT).toBeGreaterThan(BURACO.ESFERA_R)
+    expect(BURACO.DISCO_INT).toBeLessThan(BURACO.ESFERA_R * 1.4)
+    expect(BURACO.DISCO_EXT).toBeGreaterThan(BURACO.DISCO_INT * 2)
   })
-  it('tamanho segue o CONFIG (diâmetro total = 2x DISCO_EXT)', () => {
-    expect(BURACO.DISCO_EXT * 2 * BURACO.ESCALA).toBeGreaterThan(0)
-  })
-  it('anel de fótons é colado na sombra (1.0-1.1x) e mais brilhante', () => {
-    expect(BURACO.FOTON_R).toBeGreaterThanOrEqual(1.0)
-    expect(BURACO.FOTON_R).toBeLessThanOrEqual(1.1)
-    expect(BURACO.FOTON_OPAC).toBeGreaterThanOrEqual(BURACO.OPAC_NUCLEO)
-  })
-  it('miolo é corpo opaco (corta a esfera), glows são aditivos', () => {
+  it('disco e aura são shaders aditivos sem depthWrite', () => {
     const b = buildBuracoNegro()
-    expect(b.getObjectByName('miolo').material.blending).toBe(2 - 1) // NormalBlending = 1
-    for (const n of ['nucleo', 'disco', 'veu', 'pele-sup', 'pele-inf', 'foton', 'aura', 'arco-sup', 'arco-inf']) {
+    for (const n of ['disco', 'aura']) {
       const m = b.getObjectByName(n).material
-      expect(m.blending, n).toBe(2048 - 2046) // AdditiveBlending = 2
+      expect(m.isShaderMaterial, n).toBe(true)
+      expect(m.blending, n).toBe(2) // AdditiveBlending
+      expect(m.transparent, n).toBe(true)
       expect(m.depthWrite, n).toBe(false)
     }
   })
-  it('é auto-emissivo (MeshBasic: não toca na iluminação da cena)', () => {
+  it('é auto-emissivo (Basic + Shader: não toca na iluminação da cena)', () => {
     const b = buildBuracoNegro()
     b.traverse((o) => {
-      if (o.isMesh) expect(o.material.isMeshBasicMaterial).toBe(true)
+      if (o.isMesh) {
+        expect(o.material.isMeshStandardMaterial || o.material.isMeshPhysicalMaterial).toBeFalsy()
+      }
     })
   })
-  it('camadas de brilho antigas removidas (substituídas por corpo+glow)', () => {
+  it('shaders carregam uniforms sãos (cores, raios, ganho)', () => {
+    const d = makeDiskMaterial().uniforms
+    expect(d.uTime.value).toBe(0)
+    expect(d.uInnerR.value).toBe(BURACO.DISCO_INT)
+    expect(d.uOuterR.value).toBe(BURACO.DISCO_EXT)
+    expect(d.uBoost.value).toBe(BURACO.BRILHO_DISCO)
+    expect(d.uAlpha.value).toBe(BURACO.OPAC_DISCO)
+    const a = makeAuraMaterial().uniforms
+    expect(a.uTime.value).toBe(0)
+    expect(a.uEqW.value).toBe(BURACO.AURA_EQ_W)
+    expect(a.uBoost.value).toBe(BURACO.BRILHO_AURA)
+  })
+  it('nasce na deriva do fundo e escala/visibilidade seguem o CONFIG', () => {
     const b = buildBuracoNegro()
-    expect(b.getObjectByName('miolo')).toBeTruthy()
-    expect(b.getObjectByName('foton')).toBeTruthy()
-    expect(b.getObjectByName('aura')).toBeTruthy()
-  })
-  it('corDisco: quente dentro, apagada fora, com filamentos', () => {
-    const dentro = [], fora = [], faixa = []
-    for (let i = 0; i < 64; i++) {
-      const th = (i / 64) * Math.PI * 2
-      dentro.push(corDisco(th, 0.05))
-      fora.push(corDisco(th, 0.95))
-      faixa.push(corDisco(th, 0.5))
-    }
-    for (const c of [...dentro, ...fora, ...faixa]) {
-      expect(finito3(c)).toBe(true)
-      expect(c.every((v) => v >= 0 && v <= 1)).toBe(true)
-    }
-    const soma = (c) => c[0] + c[1] + c[2]
-    const media = (arr) => arr.reduce((s, c) => s + soma(c), 0) / arr.length
-    expect(media(dentro)).toBeGreaterThan(media(fora) * 3)
-    // filamentos: brilho varia com o ângulo no mesmo raio
-    const vals = faixa.map(soma)
-    const min = Math.min(...vals), max = Math.max(...vals)
-    expect(max - min).toBeGreaterThan(0.05)
-  })
-  it('doppler: um lado mais quente (controlado por DOPPLER)', () => {
-    const q = corDisco(BURACO.HOTSPOT_ANG, 0.3)
-    const f = corDisco(BURACO.HOTSPOT_ANG + Math.PI, 0.3)
-    const soma = (c) => c[0] + c[1] + c[2]
-    expect(soma(q)).toBeGreaterThan(soma(f))
-  })
-  it('lamelas oscilam o véu (1 no centro, até 1-LAMELA_F)', () => {
-    for (let i = 0; i <= 20; i++) {
-      const l = lamela(i / 20)
-      expect(l).toBeLessThanOrEqual(1)
-      expect(l).toBeGreaterThanOrEqual(1 - BURACO.LAMELA_F - 1e-9)
-      expect(Number.isFinite(l)).toBe(true)
-    }
-  })
-  it('peles dão espessura fina (offset pequeno vs disco)', () => {
-    const b = buildBuracoNegro()
-    const sup = b.getObjectByName('pele-sup'), inf = b.getObjectByName('pele-inf')
-    expect(sup.position.y).toBeCloseTo(BURACO.PELE_OFF, 6)
-    expect(inf.position.y).toBeCloseTo(-BURACO.PELE_OFF, 6)
-    expect(Math.abs(sup.position.y) / BURACO.DISCO_EXT).toBeLessThan(0.08)
-  })
-  it('mora longe: 16+ da origem e fora do caminho da câmera (margem 1.0)', () => {
-    expect(Math.hypot(...BURACO.POS)).toBeGreaterThanOrEqual(16)
-    const raioBH = BURACO.DISCO_EXT * BURACO.ESCALA
-    for (let i = 0; i <= 400; i++) {
-      const p = poseAt(i / 400)
-      const d = Math.hypot(p.pos[0] - BURACO.POS[0], p.pos[1] - BURACO.POS[1], p.pos[2] - BURACO.POS[2])
-      expect(d, `t=${(i / 400).toFixed(3)}`).toBeGreaterThan(raioBH + 1.0)
-    }
-  })
-  it('em t=0 está no repouso (giro zero, opacidades na base)', () => {
-    const b = buildBuracoNegro()
-    atualizarBuracoNegro(b, 0)
-    const u = b.userData
-    expect(u.nucleo.rotation.y).toBe(0)
-    expect(u.disco.rotation.y).toBe(0)
-    expect(u.nucleo.material.opacity).toBeCloseTo(u.opacNucleo, 6)
-    expect(u.veu.material.opacity).toBeCloseTo(u.opacVeu, 6)
-  })
-  it('gira diferencial (miolo mais rápido) e cintila contido (±10%)', () => {
-    const b = buildBuracoNegro()
-    atualizarBuracoNegro(b, 30)
-    const u = b.userData
-    expect(u.miolo.rotation.y).toBeGreaterThan(u.nucleo.rotation.y)
-    expect(u.nucleo.rotation.y).toBeGreaterThan(u.disco.rotation.y)
-    expect(u.disco.rotation.y).toBeGreaterThan(u.veu.rotation.y)
-    for (const [m, base] of [[u.miolo, u.opacMiolo], [u.nucleo, u.opacNucleo], [u.disco, u.opacDisco], [u.veu, u.opacVeu]]) {
-      expect(Math.abs(m.material.opacity - base) / base).toBeLessThanOrEqual(0.1)
-    }
-  })
-  it('giro é lento (núcleo leva 60s+ por volta)', () => {
-    expect((Math.PI * 2) / BURACO.GIRO_NUCLEO).toBeGreaterThan(60)
-  })
-  it('knobs de personalização têm defaults sãos', () => {
-    for (const k of ['OPAC_NUCLEO', 'OPAC_DISCO', 'VEU_OPAC', 'ARCO_OPAC_SUP', 'ARCO_OPAC_INF', 'MIOLO_OPAC', 'PELE_OPAC', 'FOTON_OPAC', 'AURA_OPAC']) {
-      expect(BURACO[k]).toBeGreaterThanOrEqual(0)
-      expect(BURACO[k]).toBeLessThanOrEqual(1)
-    }
-    expect(BURACO.BRILHO).toBeGreaterThan(0)
-    expect(BURACO.ESCALA).toBeGreaterThan(0)
-    expect(BURACO.FILAMENTOS).toBeGreaterThanOrEqual(0)
-    expect(BURACO.QUEDA).toBeGreaterThan(0)
-    expect(BURACO.DOPPLER).toBeGreaterThanOrEqual(0)
-    const b = buildBuracoNegro()
+    expect([...b.position.toArray()]).toEqual(posicaoOrbita(0))
+    // mora no FUNDO: bem longe do Al (que está na origem)
+    expect(Math.hypot(...posicaoOrbita(0))).toBeGreaterThan(30)
+    expect(b.rotation.x).toBeCloseTo(BURACO.INCLINACAO, 6)
     expect(b.visible).toBe(BURACO.VISIVEL)
     expect(b.scale.x).toBeCloseTo(BURACO.ESCALA, 6)
+  })
+  it('a fase da sessão define o ponto de partida e acompanha a deriva', () => {
+    const fase = 1.234
+    const b = buildBuracoNegro(fase)
+    expect([...b.position.toArray()]).toEqual(posicaoOrbita(0, fase))
+    expect(b.userData.fase).toBe(fase)
+    atualizarBuracoNegro(b, 300)
+    expect([...b.position.toArray()]).toEqual(posicaoOrbita(300, fase))
+    // e a posição difere da fase padrão (nada reinicia com o mesmo ponto)
+    const padrao = buildBuracoNegro()
+    expect([...b.position.toArray()]).not.toEqual([...padrao.position.toArray()])
+  })
+  it('a deriva é sutil e fica no fundo (raio pequeno, longe do Al, lenta)', () => {
+    // raio pequeno em torno da âncora (NÃO é um círculo de 40 em volta do Al):
+    // é o que garante que a fase sorteada nunca joga o buraco p/ trás da câmera
+    expect(BURACO.ORBITA_RAIO).toBeLessThan(10)
+    // o caminho inteiro fica bem longe do Al
+    for (let i = 0; i <= 24; i++) {
+      const t = (i / 24) * ((Math.PI * 2) / BURACO.ORBITA_VEL)
+      expect(Math.hypot(...posicaoOrbita(t))).toBeGreaterThan(30)
+    }
+    expect((Math.PI * 2) / BURACO.ORBITA_VEL).toBeGreaterThan(300) // volta em 5min+
+    // raio constante ao longo de uma volta (círculo em torno da âncora)
+    for (let i = 0; i <= 24; i++) {
+      const t = (i / 24) * ((Math.PI * 2) / BURACO.ORBITA_VEL)
+      const p = posicaoOrbita(t)
+      const dx = p[0] - BURACO.ORBITA_CENTRO[0], dz = p[2] - BURACO.ORBITA_CENTRO[2]
+      expect(Math.hypot(dx, dz)).toBeCloseTo(BURACO.ORBITA_RAIO, 3)
+    }
+  })
+  it('deriva passa longe da câmera o caminho todo (margem 1.0, 10min)', () => {
+    const raioBH = BURACO.DISCO_EXT * BURACO.ESCALA
+    for (let s = 0; s <= 600; s += 10) {
+      const bp = posicaoOrbita(s)
+      for (let i = 0; i <= 40; i++) {
+        const p = poseAt(i / 40)
+        const d = Math.hypot(p.pos[0] - bp[0], p.pos[1] - bp[1], p.pos[2] - bp[2])
+        expect(d, `s=${s} t=${(i / 40).toFixed(2)}`).toBeGreaterThan(raioBH + 1.0)
+      }
+    }
+  })
+  it('em QUALQUER fase a deriva continua longe da câmera (margem 1.0)', () => {
+    const raioBH = BURACO.DISCO_EXT * BURACO.ESCALA
+    for (let f = 0; f < 24; f++) {
+      const fase = (f / 24) * Math.PI * 2
+      for (let s = 0; s <= 600; s += 30) {
+        const bp = posicaoOrbita(s, fase)
+        for (let i = 0; i <= 20; i++) {
+          const p = poseAt(i / 20)
+          const d = Math.hypot(p.pos[0] - bp[0], p.pos[1] - bp[1], p.pos[2] - bp[2])
+          expect(d, `fase=${fase.toFixed(2)} s=${s} t=${(i / 20).toFixed(2)}`).toBeGreaterThan(raioBH + 1.0)
+        }
+      }
+    }
+  })
+  it('em QUALQUER fase o buraco fica À FRENTE da câmera nas poses da frente (bug do "sumiu")', () => {
+    // A câmera percorre as 5 poses. Nas poses em que ela olha para o fundo
+    // (01/02/03/05, câmera no +z), o buraco TEM que estar à frente dela
+    // (z NDC < 1): senão ele "some" e sobra só a luz direcional no Al.
+    // A pose 04 é a exceção conhecida: a câmera fica ATRÁS do Al (z=-5.8,
+    // olhando p/ +z), então o buraco no fundo (z≈-40) fica atrás dela — como
+    // sempre foi (antes a posição era z=-24, também atrás da pose 04).
+    const cam = new THREE.PerspectiveCamera(35, 1.6, 0.1, 100)
+    const daFrente = [0, 1, 2, 4]
+    for (let f = 0; f < 48; f++) {
+      const fase = (f / 48) * Math.PI * 2
+      for (const ci of daFrente) {
+        const p = CHAPTERS[ci].pose
+        cam.position.set(...p.pos)
+        cam.lookAt(new THREE.Vector3(...p.target))
+        cam.updateMatrixWorld(true)
+        const bp = new THREE.Vector3(...posicaoOrbita(0, fase))
+        const ndc = bp.project(cam)
+        expect(ndc.z, `fase=${fase.toFixed(2)} cap${ci + 1}`).toBeLessThan(1)
+      }
+    }
+  })
+  it('em t=0 shaders zerados e grupo na origem da órbita', () => {
+    const b = buildBuracoNegro()
+    atualizarBuracoNegro(b, 0)
+    expect(b.userData.diskMat.uniforms.uTime.value).toBe(0)
+    expect(b.userData.auraMat.uniforms.uTime.value).toBe(0)
+    expect([...b.position.toArray()]).toEqual(posicaoOrbita(0))
+  })
+  it('avança o tempo dos shaders e move o grupo na órbita', () => {
+    const b = buildBuracoNegro()
+    atualizarBuracoNegro(b, 30)
+    expect(b.userData.diskMat.uniforms.uTime.value).toBe(30)
+    expect(b.userData.auraMat.uniforms.uTime.value).toBe(30)
+    expect([...b.position.toArray()]).toEqual(posicaoOrbita(30))
+  })
+  it('GIRA=false congela (não avança uTime)', () => {
+    const b = buildBuracoNegro()
+    const antes = { ...BURACO, GIRA: BURACO.GIRA }
+    BURACO.GIRA = false
+    try {
+      atualizarBuracoNegro(b, 30)
+      expect(b.userData.diskMat.uniforms.uTime.value).toBe(0)
+    } finally {
+      BURACO.GIRA = antes.GIRA
+    }
+  })
+  it('knobs de personalização têm defaults sãos', () => {
+    for (const k of ['OPAC_DISCO', 'OPAC_AURA', 'BRILHO_DISCO', 'BRILHO_AURA']) {
+      expect(BURACO[k]).toBeGreaterThan(0)
+      expect(BURACO[k]).toBeLessThanOrEqual(3)
+    }
+    expect(BURACO.ESCALA).toBeGreaterThan(0)
+    expect(BURACO.VEL_DISCO).toBeGreaterThan(0)
   })
 })

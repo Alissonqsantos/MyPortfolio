@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { applyProgress } from '../src/al/scene.js'
+import { applyProgress, makeLetterMaterial } from '../src/al/scene.js'
 import { CHAPTERS } from '../src/al/choreography.js'
+import { CONFIG } from '../src/al/geometry.js'
 
 const cam = () => new THREE.PerspectiveCamera(35, 1.6, 0.1, 100)
 const tgt = () => new THREE.Vector3()
@@ -25,5 +26,23 @@ describe('applyProgress', () => {
       applyProgress(v, c, t)
       expect([...c.position.toArray(), ...t.toArray()].every(Number.isFinite)).toBe(true)
     }
+  })
+})
+
+describe('película fina do Al', () => {
+  it('o material das letras tem a película ligada e sutil', () => {
+    const m = makeLetterMaterial()
+    expect(m.isMeshPhysicalMaterial).toBe(true)
+    expect(m.clearcoat).toBeGreaterThan(0)
+    expect(m.clearcoat).toBeLessThanOrEqual(0.4)
+    expect(m.clearcoatRoughness).toBeLessThanOrEqual(0.2)
+  })
+  it('a película reflete a luz roxa: nenhuma cor própria, só reflexo do ambiente/luzes', () => {
+    const m = makeLetterMaterial()
+    // a base continua quase-preta (0x030303): o brilho roxo vem do reflexo,
+    // não de emissão nem de cor própria
+    expect(m.color.getHex()).toBe(CONFIG.COR)
+    expect(m.emissive.getHex()).toBe(0x000000)
+    expect(m.metalness).toBeLessThanOrEqual(0.2)
   })
 })

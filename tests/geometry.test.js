@@ -12,7 +12,10 @@ describe('geometria do Al', () => {
     expect(CONFIG.CANTO_RAIO).toBe(0.0)
     expect(CONFIG.COR).toBe(0x030303)
     expect(CONFIG.ROUGH).toBeGreaterThanOrEqual(0.85)
-    expect(CONFIG.CLEARCOAT).toBe(0)
+    // película fina sutil: reflete um pouco da luz roxa do buraco negro
+    expect(CONFIG.CLEARCOAT).toBeGreaterThan(0)
+    expect(CONFIG.CLEARCOAT).toBeLessThanOrEqual(0.4)
+    expect(CONFIG.CLEARCOAT_ROUGH).toBeLessThanOrEqual(0.2)
   })
   it('gera as duas geometrias sem vértices não-finitos', () => {
     const { aGeo, lGeo } = getGeometrias()
@@ -39,5 +42,8 @@ describe('geometria do Al', () => {
     expect(c.r + c.b).toBeGreaterThan(c.g * 2)
     expect(sol.intensity).toBeGreaterThan(CONFIG.LUZ_KEY.INT)
     expect(sol.intensity).toBeGreaterThan(CONFIG.LUZ_FILL.INT)
+  })
+  it('Al à deriva no espaço: sem chão, sem sombra projetada', () => {
+    expect(CONFIG.CHAO_ATIVO).toBe(false)
   })
 })

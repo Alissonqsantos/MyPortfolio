@@ -26,8 +26,8 @@ const CONFIG = {
   ROUGH: 0.9,           // rugosidade (0 = espelho, 1 = fosco) — alta p/ apagar brilho
   METAL: 0.1,           // metalicidade (0 = plástico, 1 = metal)
   BUMP: 0.1,          // relevo fino da superfície
-  CLEARCOAT: 0.0,       // verniz desligado (era o verniz que mantinha o brilho)
-  CLEARCOAT_ROUGH: 0.2, // rugosidade do verniz
+  CLEARCOAT: 0.3,       // PELÍCULA FINA: verniz que reflete um pouco da luz roxa do buraco negro (0 = sem película)
+  CLEARCOAT_ROUGH: 0.15, // suavidade da película (menor = reflexo mais nítido; maior = fosco)
   FUNDO: 0x000000,      // cor do fundo da cena
 
   // -------- ANIMAÇÃO --------
@@ -60,10 +60,13 @@ const CONFIG = {
   SOMBRA_MAPA: 2048,  // resolução do mapa de sombra (maior = mais nítida)
   SOMBRA_ALCANCE: 8,  // metade do tamanho da área coberta pela sombra
 
-  // -------- CHÃO (só recebe a sombra; não aparece) --------
-  CHAO_Y: -2.35,        // altura do chão
-  CHAO_TAM: 60,         // tamanho do chão
-  CHAO_OPACIDADE: 0.22  // opacidade da sombra projetada
+  // -------- CHÃO (removido: o Al flutua à deriva no espaço) --------
+  // Sem plano de chão e sem sombra projetada. As chaves ficam aqui como
+  // referência, mas nada é criado na cena.
+  CHAO_ATIVO: false,    // false = Al à deriva (sem chão, sem sombra no chão)
+  CHAO_Y: -2.35,        // (legado) altura do chão quando ativo
+  CHAO_TAM: 60,         // (legado) tamanho do chão quando ativo
+  CHAO_OPACIDADE: 0.22  // (legado) opacidade da sombra projetada quando ativo
 };
 
 // Escala global derivada da ALTURA (1.0 no padrão). Aplica-se ao conjunto todo,
