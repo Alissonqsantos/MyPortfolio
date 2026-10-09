@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { CONFIG, buildAl } from './geometry.js';
-import { COSMOS, buildCosmos } from './cosmos.js';
+import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, buildLuzesCosmos } from './cosmos.js';
+import { prefereReduzirMovimento } from './webgl.js';
 import { poseAt } from './choreography.js';
 
 // Escala global derivada da ALTURA (1.0 no padrão) — mesma do Al3D.
@@ -31,7 +32,14 @@ export function createAlScene(canvas) {
 
   const cena = new THREE.Scene();
   cena.background = new THREE.Color(COSMOS.FUNDO);
-  cena.add(buildCosmos());
+  const cosmos = buildCosmos();
+  cena.add(cosmos);
+  const estrelas = cosmos.getObjectByName('estrelas');
+  // Luz do cosmo no Al: mesma direção das névoas, intensidade contida
+  // para não brigar com key/fill/rim aprovadas.
+  for (const l of buildLuzesCosmos(ESC)) cena.add(l);
+  const cadente = criarLinhaCadente();
+  cena.add(cadente);
 
   const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
   const alvo = new THREE.Vector3();
@@ -152,12 +160,36 @@ export function createAlScene(canvas) {
   }
 
   let rafId = 0;
+  const estatico = typeof matchMedia !== 'undefined' && prefereReduzirMovimento();
+  let cadAtiva = null, tCad = 0, esperaCad = 6;
   (function loop() {
     rafId = requestAnimationFrame(loop);
     const dt = Math.min(relogio.getDelta(), 0.05);
     if (!visivel) return;
     applyProgress(tAtual, camera, alvo);
     atualizarEmpurrao(dt);
+    if (!estatico) {
+      // Deriva quase parada: volta completa em ~42min.
+      estrelas.rotation.y = anguloDeriva(relogio.elapsedTime);
+      // Cadentes raras: uma a cada 9–22s, rastro de 0.5–0.9s.
+      if (cadAtiva) {
+        tCad += dt;
+        if (tCad >= cadAtiva.dur) {
+          cadente.visible = false;
+          esperaCad = cadAtiva.espera;
+          cadAtiva = null;
+        } else {
+          atualizarLinhaCadente(cadente, cadAtiva, tCad);
+        }
+      } else {
+        esperaCad -= dt;
+        if (esperaCad <= 0) {
+          cadAtiva = sortearCadente();
+          tCad = 0;
+          cadente.visible = true;
+        }
+      }
+    }
     renderer.render(cena, camera);
   })();
   resize();
