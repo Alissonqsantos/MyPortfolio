@@ -32,7 +32,7 @@ describe('buraco negro', () => {
   })
   it('miolo é corpo opaco (corta a esfera), glows são aditivos', () => {
     const b = buildBuracoNegro()
-    expect(b.getObjectByName('miolo').material.blending).toBe(2048 - 2048) // NormalBlending = 0
+    expect(b.getObjectByName('miolo').material.blending).toBe(2 - 1) // NormalBlending = 1
     for (const n of ['nucleo', 'disco', 'veu', 'pele-sup', 'pele-inf', 'foton', 'aura', 'arco-sup', 'arco-inf']) {
       const m = b.getObjectByName(n).material
       expect(m.blending, n).toBe(2048 - 2046) // AdditiveBlending = 2
