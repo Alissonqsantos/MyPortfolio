@@ -35,8 +35,8 @@ export const COSMOS = {
   },
   // Luzes que amarram o Al ao cosmo: mesma direção das névoas.
   LUZES: [
-    { COR: 0x7322f2, INT: 0.4, POS: [-22, 6, -24] },
-    { COR: 0xe296ff, INT: 0.2, POS: [24, -4, -20] },
+    { COR: 0x7322f2, INT: 0.9, POS: [-22, 6, -24] },
+    { COR: 0xe296ff, INT: 0.5, POS: [24, -4, -20] },
   ],
 };
 

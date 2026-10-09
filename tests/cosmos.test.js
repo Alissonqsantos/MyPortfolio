@@ -82,7 +82,7 @@ describe('fundo cósmico', () => {
     const luzes = buildLuzesCosmos(1)
     expect(luzes).toHaveLength(COSMOS.LUZES.length)
     for (const l of luzes) {
-      expect(l.intensity).toBeLessThanOrEqual(0.6)
+      expect(l.intensity).toBeLessThanOrEqual(1.2)
       expect(l.castShadow).toBe(false)
     }
     const cores = luzes.map((l) => l.color.getHex())
