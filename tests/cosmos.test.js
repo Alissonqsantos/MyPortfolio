@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import * as THREE from 'three'
-import { COSMOS, buildCosmos, anguloDeriva, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, buildLuzesCosmos, semente } from '../src/al/cosmos.js'
+import { COSMOS, buildCosmos, sortearCadente, poseCadente, criarLinhaCadente, atualizarLinhaCadente, buildLuzesCosmos, semente } from '../src/al/cosmos.js'
 
 describe('fundo cósmico', () => {
   it('gera 900 estrelas dentro da casca 40-60', () => {
