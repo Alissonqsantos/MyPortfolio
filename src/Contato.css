@@ -1,0 +1,152 @@
+/* #contato — rodapé wordmark gigante (preview 02: Yakushev + studiors).
+   Marca como set-piece final do portfólio dark imersivo. */
+.contato {
+  position: relative;
+  z-index: 1;
+  background: #0c0b0c;
+  padding: clamp(4rem, 8vw, 7rem) clamp(1.5rem, 6vw, 4rem) clamp(3rem, 5vw, 4rem);
+  text-align: center;
+  overflow: hidden;
+}
+
+.contato-sociais {
+  /* Acima do wordmark no hit-test: os links ficam sempre clicáveis,
+     mesmo que a caixa do wordmark encoste neles em algum viewport. */
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+}
+
+.contato-link {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+  text-decoration: none;
+  transition: color 0.3s var(--al-out);
+}
+
+.contato-link:hover,
+.contato-link:focus-visible {
+  color: #9780ff;
+}
+
+.contato-wordmark {
+  position: relative;
+  display: inline-block;
+  /* Hit só nos glifos + buraco: o <a> não captura pointer (gaps/padding
+     atravessam para baixo), cada letra e o ícone reabilitam (auto).
+     O clique borbulha para o <a> — voltar ao topo preservado; teclado intacto. */
+  pointer-events: none;
+  margin-top: 1rem;
+  padding-right: 0.35em;
+  font-family: 'Sofia Sans Condensed', 'Archivo', system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(4rem, 14.5vw, 13rem);
+  line-height: 0.9;
+  letter-spacing: -0.01em;
+  color: #fff;
+  text-decoration: none;
+  user-select: none;
+}
+
+.contato-wordmark:focus-visible {
+  outline: 2px solid #9780ff;
+  outline-offset: 8px;
+  border-radius: 2px;
+}
+
+/* Letras em spans: cada uma recebe --g/--dir no hover (distância ao ícone).
+   inline-block para o transform valer; letter-spacing -0.01em herdado do
+   wordmark já espaça os spans — sem margem extra (evita tracking duplo). */
+.contato-palavra {
+  display: inline-block;
+}
+
+.contato-letra {
+  display: inline-block;
+  /* Único hit do wordmark (além do buraco): sobrevoar/clicar o ALISSON
+     passa por aqui. */
+  pointer-events: auto;
+  --g: 0;
+  --dir: 0;
+  /* Base cravada: skewX com pivô na baseline — cisalhamento horizontal nunca
+     altera o Y de ponto algum, então base, topo e altura ficam fixos por
+     construção. O topo "deita" rumo ao buraco como a estrela da referência. */
+  transform-origin: 50% 100%;
+  will-change: transform, filter;
+}
+
+.contato-asterisco {
+  /* Gatilho do efeito junto com os glifos: sobrevoar o buraco também liga.
+     O clique borbulha para o <a> (voltar ao topo). Não cobre os sociais:
+     a folga de 0.6em garante isso em qualquer viewport. */
+  position: absolute;
+  z-index: 1;
+  top: -0.42em;
+  right: -0.08em;
+  display: inline-block;
+  width: 0.85em;
+  height: 0.85em;
+  object-fit: contain;
+  pointer-events: auto;
+}
+
+/* Sucção do buraco negro: o ícone sobre o N vira singularidade — cada letra
+   "deita" o topo em direção ao núcleo. Técnica: skewX PURO com pivô na
+   baseline — cisalhamento horizontal nunca altera o Y de ponto algum, então
+   base, topo e altura ficam cravados por construção (determinante 1: área e
+   tamanho idênticos, sem translate, sem scale). Só o topo desliza
+   lateralmente rumo ao buraco (--dir, mesmo g do nav), mais no N (~7°) que
+   no A (~0.5°). O glow fica no buraco, sutil — nunca nas letras. Só com
+   hover real; touch e reduced-motion fora. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .contato-letra {
+    transition:
+      transform 0.45s var(--al-out),
+      filter 0.45s var(--al-out);
+    transition-delay: calc((6 - var(--i, 0)) * 20ms);
+  }
+
+  .contato-wordmark.contato-ativo .contato-letra,
+  .contato-wordmark:focus-visible .contato-letra {
+    transform: skewX(calc(var(--dir) * var(--g) * -7deg));
+    filter: blur(calc(var(--g) * 0.7px)) brightness(calc(1 + var(--g) * 0.06));
+  }
+
+  .contato-asterisco {
+    transition:
+      transform 0.45s var(--al-out),
+      filter 0.45s var(--al-out);
+  }
+
+  .contato-wordmark.contato-ativo .contato-asterisco,
+  .contato-wordmark:focus-visible .contato-asterisco {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 4px rgba(151, 128, 255, 0.25));
+  }
+}
+
+.contato-fim {
+  margin-top: 1rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: #9a9a9a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contato-letra,
+  .contato-asterisco {
+    transition: none;
+    animation: none;
+    transform: none;
+    filter: none;
+    text-shadow: none;
+  }
+}
