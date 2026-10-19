@@ -1,0 +1,37 @@
+/* Cortina premium — painel fullscreen que sobe do rodapé com linha lavanda
+   no topo; o scroll imediato acontece no ponto cego (tela coberta). */
+.wormhole {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  visibility: hidden;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* Cortina premium: painel escuro que sobe do rodapé e sai pelo topo. */
+.wormhole-cortina {
+  position: absolute;
+  inset: 0;
+  background: #0c0b0c;
+  will-change: transform;
+}
+
+/* Linha lavanda no topo da cortina — assinatura editorial. */
+.wormhole-linha {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #9780ff;
+  box-shadow: 0 0 24px rgba(151, 128, 255, 0.8), 0 0 64px rgba(151, 128, 255, 0.35);
+}
+
+/* (Íris removida — agora é cortina premium: ver .wormhole-cortina acima.) */
+
+@media (prefers-reduced-motion: reduce) {
+  .wormhole {
+    display: none;
+  }
+}
