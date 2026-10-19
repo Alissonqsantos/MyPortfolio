@@ -25,7 +25,7 @@ export const BURACO = {
   // fase sorteada da sessão gire — a câmera fica a ~9 do Al, e a ~40 daqui.
   ORBITA_CENTRO: [0, 5, -40], // âncora no fundo central (z=-40, altura 5)
   ORBITA_RAIO: 3,    // raio da deriva em torno da âncora (bem sutil; ≤10 = sempre no fundo)
-  ORBITA_VEL: 0.015, // rad/s — uma volta em ~7min (deriva lenta e contínua)
+  ORBITA_VEL: 0.02,  // rad/s — uma volta em ~5min (deriva lenta e contínua)
   ORBITA_FASE: -1.5708, // ângulo inicial padrão (-PI/2); a cena usa a fase sorteada da sessão
   ORBITA_BOB_AMP: 0.4,  // flutuação vertical em Y (unidades; 0 = deriva plana)
   ORBITA_BOB_VEL: 0.15, // velocidade da flutuação (período ~42s)

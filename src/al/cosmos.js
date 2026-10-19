@@ -73,7 +73,7 @@ export const COSMOS = {
   // daqui. A posição é a do buraco negro (posicaoOrbita): a luz nasce dele e
   // se move com ele. Luz invisível (sem corpo visível no céu): só ilumina.
   SOL: {
-    COR: 0x7322f2, INT: 1.3,
+    COR: 0x7322f2, INT: 3.2,
   },
 };
 

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { CONFIG, getGeometrias, buildAl } from '../src/al/geometry.js'
+import { CONFIG, configLuzBranca, getGeometrias, buildAl } from '../src/al/geometry.js'
+import { makeLetterMaterial } from '../src/al/scene.js'
 import { buildSol } from '../src/al/cosmos.js'
 import * as THREE from 'three'
 
@@ -11,10 +12,10 @@ describe('geometria do Al', () => {
     expect(CONFIG.L_ESPESSURA).toBe(0.7)
     expect(CONFIG.CANTO_RAIO).toBe(0.0)
     expect(CONFIG.COR).toBe(0x030303)
-    expect(CONFIG.ROUGH).toBeGreaterThanOrEqual(0.85)
-    // película fina sutil: reflete um pouco da luz roxa do buraco negro
-    expect(CONFIG.CLEARCOAT).toBeGreaterThan(0)
-    expect(CONFIG.CLEARCOAT).toBeLessThanOrEqual(0.4)
+    // base semi-fosca: difunde o roxo em vez de apagar; película forte e lisa
+    // espelha a luz roxa do buraco negro com nitidez
+    expect(CONFIG.ROUGH).toBeLessThan(0.7)
+    expect(CONFIG.CLEARCOAT).toBeGreaterThan(0.5)
     expect(CONFIG.CLEARCOAT_ROUGH).toBeLessThanOrEqual(0.2)
   })
   it('gera as duas geometrias sem vértices não-finitos', () => {
@@ -31,10 +32,12 @@ describe('geometria do Al', () => {
     const bb = new THREE.Box3().setFromObject(g)
     expect(bb.max.y - bb.min.y).toBeCloseTo(CONFIG.ALTURA, 0)
   })
-  it('brancas são só apoio (baixas) e o sol roxo protagoniza', () => {
-    expect(CONFIG.LUZ_KEY.INT).toBeLessThanOrEqual(0.3)
-    expect(CONFIG.LUZ_FILL.INT).toBeLessThanOrEqual(0.5)
-    expect(CONFIG.LUZ_RIM.INT).toBeLessThanOrEqual(0.6)
+  it('brancas quase zeradas (só o fiapo) e o sol roxo protagoniza', () => {
+    expect(CONFIG.LUZ_KEY.INT).toBeLessThanOrEqual(0.03)
+    expect(CONFIG.LUZ_FILL.INT).toBeLessThanOrEqual(0.03)
+    expect(CONFIG.LUZ_RIM.INT).toBeLessThanOrEqual(0.05)
+    // reflexo branco do ambiente nas letras quase zerado: não compete com o roxo
+    expect(CONFIG.ENV_MAP).toBeLessThanOrEqual(0.1)
     expect(CONFIG.AMBIENTE).toBeLessThanOrEqual(0.02)
     // entidade única roxa, mais forte que qualquer branca
     const sol = buildSol(1)
@@ -45,5 +48,17 @@ describe('geometria do Al', () => {
   })
   it('Al à deriva no espaço: sem chão, sem sombra projetada', () => {
     expect(CONFIG.CHAO_ATIVO).toBe(false)
+  })
+  it('VITE_LUZ_BRANCA: multiplicador da branca, 1 por padrão', () => {
+    // sem a var: 1 (valores do CONFIG); aceita 0 (só o roxo) e 2 (dobro)
+    expect(configLuzBranca({}, false)).toBe(1)
+    expect(configLuzBranca({ VITE_LUZ_BRANCA: '0' }, false)).toBe(0)
+    expect(configLuzBranca({ VITE_LUZ_BRANCA: '2' }, false)).toBe(2)
+    // inválido volta ao 1; negativo não apaga invertendo (cai no 1)
+    expect(configLuzBranca({ VITE_LUZ_BRANCA: 'abc' }, false)).toBe(1)
+    expect(configLuzBranca({ VITE_LUZ_BRANCA: '-1' }, false)).toBe(1)
+    // o material acompanha: envMapIntensity escala junto
+    expect(makeLetterMaterial(0).envMapIntensity).toBeCloseTo(0, 6)
+    expect(makeLetterMaterial(2).envMapIntensity).toBeCloseTo(CONFIG.ENV_MAP * 2, 6)
   })
 })

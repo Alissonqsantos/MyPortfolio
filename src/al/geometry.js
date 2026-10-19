@@ -23,11 +23,11 @@ const CONFIG = {
 
   // -------- APARÊNCIA (material das letras) --------
   COR: 0x030303,        // cor quase-preto (visível no fundo preto)
-  ROUGH: 0.9,           // rugosidade (0 = espelho, 1 = fosco) — alta p/ apagar brilho
-  METAL: 0.1,           // metalicidade (0 = plástico, 1 = metal)
+  ROUGH: 0.55,          // rugosidade (0 = espelho, 1 = fosco) — semi-fosca p/ a base difundir o roxo
+  METAL: 0.2,           // metalicidade (0 = plástico, 1 = metal) — reflexo levemente tintado
   BUMP: 0.1,          // relevo fino da superfície
-  CLEARCOAT: 0.3,       // PELÍCULA FINA: verniz que reflete um pouco da luz roxa do buraco negro (0 = sem película)
-  CLEARCOAT_ROUGH: 0.15, // suavidade da película (menor = reflexo mais nítido; maior = fosco)
+  CLEARCOAT: 1.0,       // PELÍCULA FORTE: verniz que espelha a luz roxa do buraco negro (1 = camada cheia)
+  CLEARCOAT_ROUGH: 0.08, // película quase lisa: reflexo roxo nítido, não difuso
   FUNDO: 0x000000,      // cor do fundo da cena
 
   // -------- ANIMAÇÃO --------
@@ -50,11 +50,14 @@ const CONFIG = {
   },
 
   // -------- LUZES --------
-  // Brancas em baixa intensidade (apoio) + roxas do cosmos (protagonistas).
-  LUZ_KEY:  { COR: 0xffffff, INT: 0.15, POS: [4, 7, 6] },   // principal (faz sombra)
-  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.15, POS: [-6, 2, 4] },  // preenchimento (azulado)
-  LUZ_RIM:  { COR: 0xffffff, INT: 0.25, POS: [-2, 4, -6] },  // contorno (atrás)
-  AMBIENTE: 0.005,    // reflexo do ambiente (RoomEnvironment) — quase apagado
+  // Brancas quase zeradas (só o fiapo p/ a silhueta não sumir no preto) +
+  // roxa do buraco negro como protagonista absoluta: o Al reflete mais
+  // roxo que branco em qualquer ângulo.
+  LUZ_KEY:  { COR: 0xffffff, INT: 0.015, POS: [4, 7, 6] },   // principal (faz sombra)
+  LUZ_FILL: { COR: 0xdfe8ff, INT: 0.015, POS: [-6, 2, 4] },  // preenchimento (azulado)
+  LUZ_RIM:  { COR: 0xffffff, INT: 0.02, POS: [-2, 4, -6] },  // contorno (atrás)
+  AMBIENTE: 0.005,    // blur do RoomEnvironment (sigma do PMREM) — não é intensidade
+  ENV_MAP: 0.08,      // reflexo branco do ambiente NAS LETRAS (envMapIntensity) — quase apagado p/ não competir com o roxo
 
   // -------- SOMBRA --------
   SOMBRA_MAPA: 2048,  // resolução do mapa de sombra (maior = mais nítida)
@@ -72,6 +75,25 @@ const CONFIG = {
 // Escala global derivada da ALTURA (1.0 no padrão). Aplica-se ao conjunto todo,
 // às luzes, à sombra e ao chão — assim mudar a ALTURA não desalinha a cena.
 const ESC = CONFIG.ALTURA / 3.6;
+
+// Multiplicador da luz BRANCA sobre o Al via `.env` (VITE_LUZ_BRANCA):
+// 1 = valores do CONFIG acima; 0 = brancas apagadas; 2 = dobro.
+// A roxa do buraco negro não entra aqui — ela é protagonista fixa.
+// Requer restart do `npm run dev`. Aceita objeto p/ testes.
+// (import.meta.env não existe fora do Vite — o fallback {} mantém Node puro.)
+export function configLuzBranca(sobre = null, usarEnv = true) {
+  let base = {};
+  if (usarEnv) {
+    try {
+      base = (typeof import.meta !== 'undefined' && import.meta.env) || {};
+    } catch { base = {}; }
+  }
+  const env = { ...base, ...(sobre || {}) };
+  const cru = env.VITE_LUZ_BRANCA;
+  if (cru === undefined || cru === null || cru === '') return 1;
+  const n = Number(cru);
+  return Number.isFinite(n) && n >= 0 ? n : 1;
+}
 
 // Contorno do A medido da silhueta real (y para cima, pés em y=0, topo em y=3.6).
 const CONTORNO_A = [
