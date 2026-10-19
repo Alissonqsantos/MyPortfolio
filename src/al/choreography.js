@@ -16,6 +16,13 @@ export function chapterIndexFor(t) {
   return Math.min(4, Math.floor(clamp01(t) * 5));
 }
 
+// Pontos de snap do pin (um por início de capítulo + fim): rolada grande
+// para no próximo capítulo em vez de atravessar dois de uma vez.
+// Fonte única da verdade — o Hero usa no `snap.snapTo` do ScrollTrigger.
+export function limitesCapitulos(n = CHAPTERS.length) {
+  return Array.from({ length: n + 1 }, (_, i) => i / n);
+}
+
 const lerp3 = (a, b, f) => [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
 
 export function poseAt(t) {

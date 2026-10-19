@@ -4,7 +4,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { HERO } from './hero-copy.js';
 import { createAlScene } from './al/scene.js';
 import { temWebGL, prefereReduzirMovimento } from './al/webgl.js';
-import { CHAPTERS, chapterIndexFor } from './al/choreography.js';
+import { CHAPTERS, chapterIndexFor, limitesCapitulos } from './al/choreography.js';
+import useReveal from './useReveal.js';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,6 +16,7 @@ export default function Hero() {
   const [capitulo, setCapitulo] = useState(0);
   const [reduced, setReduced] = useState(false);
   const [semGL, setSemGL] = useState(false);
+  useReveal(heroRef);
 
   useEffect(() => {
     if (!temWebGL()) {
@@ -33,7 +35,14 @@ export default function Hero() {
         start: 'top top',
         end: '+=400%',            // 5 telas no total
         pin: true,
-        scrub: true,
+        scrub: 1,                 // 1s de amortecimento: glide cósmico, não engrenagem
+        // Rolada grande assenta no início do próximo capítulo em vez de
+        // atravessar dois de uma vez. Off em reduced-motion (sem pin lá).
+        snap: {
+          snapTo: limitesCapitulos(),
+          duration: 1.0,
+          ease: 'expo.out',
+        },
         onUpdate: (self) => {
           const t = self.progress;               // 0..1 já normalizado pelo GSAP
           sceneRef.current.setProgress(t);
@@ -41,12 +50,24 @@ export default function Hero() {
         },
       });
     }
+    // Ordem importa: o wrap do canvas segue a CAIXA do hero pinnado —
+    // o refresh atualiza a caixa primeiro; o resize imediato pega o caso
+    // comum, o rAF pega o pós-layout e o timeout é backstop (rAF pausa
+    // em aba oculta). resizeTo ignora no-ops, então chamar 3x é de graça.
+    let resizeRaf = 0;
+    let resizeTimer = 0;
     const onResize = () => {
-      scene.resize();
       ScrollTrigger.refresh();
+      scene.resize();
+      cancelAnimationFrame(resizeRaf);
+      clearTimeout(resizeTimer);
+      resizeRaf = requestAnimationFrame(() => scene.resize());
+      resizeTimer = setTimeout(() => scene.resize(), 150);
     };
     window.addEventListener('resize', onResize);
     return () => {
+      cancelAnimationFrame(resizeRaf);
+      clearTimeout(resizeTimer);
       window.removeEventListener('resize', onResize);
       if (st) st.kill();
       scene.dispose();
@@ -61,7 +82,7 @@ export default function Hero() {
       <div className="hero-canvas-wrap" aria-hidden="true">
         {semGL ? <div className="hero-al-fallback">Al</div> : <canvas ref={canvasRef} />}
       </div>
-      <div className="hero-ident">
+      <div className="hero-ident reveal">
         <h1>{HERO.nome}</h1>
         <p>{HERO.cargo}</p>
       </div>

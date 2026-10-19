@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { CHAPTERS, chapterIndexFor, poseAt, progressFromScroll } from '../src/al/choreography.js'
+import { CHAPTERS, chapterIndexFor, limitesCapitulos, poseAt, progressFromScroll } from '../src/al/choreography.js'
 
 describe('coreografia', () => {
   it('tem 5 capítulos com as palavras aprovadas', () => {
@@ -26,6 +26,9 @@ describe('coreografia', () => {
     expect(idx(300)).toBe(3)
     expect(idx(400)).toBe(4)
     expect(idx(500)).toBe(4)
+  })
+  it('limitesCapitulos dá um ponto de snap por início de capítulo + fim', () => {
+    expect(limitesCapitulos()).toEqual([0, 0.2, 0.4, 0.6, 0.8, 1])
   })
   it('poseAt reproduz exatamente as poses inicial e final', () => {
     expect(poseAt(0)).toEqual(CHAPTERS[0].pose)
