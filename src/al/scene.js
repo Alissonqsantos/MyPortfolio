@@ -1,0 +1,339 @@
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { CONFIG, buildAl, configLuzBranca } from './geometry.js';
+import { COSMOS, buildCosmos, buildNebulosa, atualizarNebulosa, anguloDeriva, sortearCadente, criarLinhaCadente, atualizarLinhaCadente, atualizarSol, buildSol } from './cosmos.js';
+import { buildBuracoNegro, atualizarBuracoNegro } from './buracoNegro.js';
+import { buildSatelites, atualizarSatelites, configSats } from './satelites.js';
+import { ndcParaPx } from '../gravidade.js';
+import { obterSessao, tempoDaSessao } from './sessao.js';
+import { prefereReduzirMovimento } from './webgl.js';
+import { poseAt } from './choreography.js';
+
+// Escala global derivada da ALTURA (1.0 no padrão) — mesma do Al3D.
+const ESC = CONFIG.ALTURA / 3.6;
+
+// Puro, sem renderer/DOM: testável em Node.
+export function applyProgress(t, camera, target) {
+  const p = poseAt(t);
+  camera.position.set(...p.pos);
+  target.set(...p.target);
+  camera.lookAt(target);
+}
+
+// Material das letras: base quase-preta semi-fosca + PELÍCULA FORTE
+// (clearcoat) que espelha a luz roxa do buraco negro. O reflexo branco do
+// ambiente é quase zerado (envMapIntensity) p/ não competir com o roxo.
+// `mult` = multiplicador da luz branca (VITE_LUZ_BRANCA); null = lê o .env.
+export function makeLetterMaterial(mult = null) {
+  const k = mult ?? configLuzBranca();
+  return new THREE.MeshPhysicalMaterial({
+    color: CONFIG.COR, roughness: CONFIG.ROUGH, metalness: CONFIG.METAL,
+    clearcoat: CONFIG.CLEARCOAT, clearcoatRoughness: CONFIG.CLEARCOAT_ROUGH, bumpScale: CONFIG.BUMP,
+    envMapIntensity: CONFIG.ENV_MAP * k
+  });
+}
+
+export function createAlScene(canvas) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 0.8;
+
+  // Sessão do navegador: preset das estrelas (seed) + ângulo inicial da órbita
+  // do buraco negro (fase). F5 mantém tudo e o relógio continua; fechar e
+  // abrir o navegador sorteia preset e ângulo novos.
+  const sessao = obterSessao();
+
+  const cena = new THREE.Scene();
+  cena.background = new THREE.Color(COSMOS.FUNDO);
+  // Nebulosas: esfera de céu gigante (névoa contínua) — atrás de tudo.
+  let nebulosa = null;
+  if (COSMOS.NEBULOSA.ATIVO) {
+    nebulosa = buildNebulosa(sessao.seed);
+    cena.add(nebulosa);
+  }
+  const cosmos = buildCosmos(sessao.seed);
+  cena.add(cosmos);
+  const estrelas = cosmos.getObjectByName('estrelas');
+  const cadente = criarLinhaCadente();
+  cena.add(cadente);
+  // Buraco negro lateral: auto-emissivo, não toca na iluminação.
+  const buraco = buildBuracoNegro(sessao.fase);
+  cena.add(buraco);
+
+  const camera = new THREE.PerspectiveCamera(CONFIG.FOV, 1.6, CONFIG.NEAR, CONFIG.FAR);
+  const alvo = new THREE.Vector3();
+
+  // Brancas baixas (apoio, sem sombra) + SOL do cosmos (protagonista, com sombra).
+  let cenaEnv = null;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  cenaEnv = pmrem.fromScene(new RoomEnvironment(renderer), CONFIG.AMBIENTE);
+  cena.environment = cenaEnv.texture;
+
+  const mobile = typeof innerWidth !== 'undefined' && innerWidth < 768;
+  const sombraRes = mobile ? CONFIG.SOMBRA_MAPA / 2 : CONFIG.SOMBRA_MAPA;
+
+  // Brancas com multiplicador do `.env` (VITE_LUZ_BRANCA): 1 = CONFIG,
+  // 0 = apagadas, 2 = dobro. A roxa do buraco (sol) não entra — fixa.
+  const branca = configLuzBranca();
+  const key = new THREE.DirectionalLight(CONFIG.LUZ_KEY.COR, CONFIG.LUZ_KEY.INT * branca);
+  key.position.set(...CONFIG.LUZ_KEY.POS).multiplyScalar(ESC);
+  cena.add(key);
+  const fill = new THREE.DirectionalLight(CONFIG.LUZ_FILL.COR, CONFIG.LUZ_FILL.INT * branca);
+  fill.position.set(...CONFIG.LUZ_FILL.POS).multiplyScalar(ESC);
+  cena.add(fill);
+  const rim = new THREE.DirectionalLight(CONFIG.LUZ_RIM.COR, CONFIG.LUZ_RIM.INT * branca);
+  rim.position.set(...CONFIG.LUZ_RIM.POS).multiplyScalar(ESC);
+  cena.add(rim);
+  // A sombra do Al vem da luz do buraco negro — ela se move com ele.
+  const sol = buildSol(ESC, sessao.fase);
+  sol.castShadow = true;
+  sol.shadow.mapSize.set(sombraRes, sombraRes);
+  sol.shadow.camera.left = -CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.right = CONFIG.SOMBRA_ALCANCE * ESC;
+  sol.shadow.camera.top = CONFIG.SOMBRA_ALCANCE * ESC; sol.shadow.camera.bottom = -CONFIG.SOMBRA_ALCANCE * ESC;
+  cena.add(sol);
+
+  const modelo = buildAl(makeLetterMaterial(), makeLetterMaterial());
+  modelo.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  cena.add(modelo);
+  // Painéis-satélite: layout aleatório por sessão em volta do Al, à deriva.
+  // A rejeição contra a bbox do modelo garante a margem de 1.0 das letras.
+  const satCfg = configSats();
+  const caixaAl = new THREE.Box3().setFromObject(modelo);
+  const distCaixaAl = (p) => {
+    const dx = Math.max(caixaAl.min.x - p[0], 0, p[0] - caixaAl.max.x);
+    const dy = Math.max(caixaAl.min.y - p[1], 0, p[1] - caixaAl.max.y);
+    const dz = Math.max(caixaAl.min.z - p[2], 0, p[2] - caixaAl.max.z);
+    return Math.hypot(dx, dy, dz);
+  };
+  const satelites = satCfg.visivel ? buildSatelites(sessao.seed, camera, satCfg, distCaixaAl, modelo) : null;
+  if (satelites) cena.add(satelites);
+
+  // Pose de repouso de cada letra — mesma lógica do Al3D.
+  const malhaA = modelo.getObjectByName('letraA');
+  const malhaL = modelo.getObjectByName('letraL');
+  for (const malha of [malhaA, malhaL]) {
+    malha.geometry.computeBoundingBox();
+    const bb = malha.geometry.boundingBox;
+    const tam = bb.getSize(new THREE.Vector3());
+    malha.userData.centro = bb.getCenter(new THREE.Vector3());
+    malha.userData.meia = new THREE.Vector2(
+      Math.max(tam.x, 1e-3) / 2, Math.max(tam.y, 1e-3) / 2);
+    malha.userData.repouso = new THREE.Vector3(malha.position.x, malha.position.y, malha.position.z);
+    malha.userData.empurrao = new THREE.Vector3();
+    malha.userData.tombo = new THREE.Vector3();
+  }
+
+  // Al à deriva no espaço: sem chão, sem sombra projetada.
+  // (Para reativar o chão antigo: CHAO_ATIVO: true no CONFIG.)
+  if (CONFIG.CHAO_ATIVO) {
+    const chao = new THREE.Mesh(
+      new THREE.PlaneGeometry(CONFIG.CHAO_TAM, CONFIG.CHAO_TAM),
+      new THREE.ShadowMaterial({ opacity: CONFIG.CHAO_OPACIDADE })
+    );
+    chao.rotation.x = -Math.PI / 2;
+    chao.position.y = CONFIG.CHAO_Y * ESC;
+    chao.receiveShadow = true;
+    cena.add(chao);
+  }
+
+  // Hover-push: mesma matemática do Al3D. O ponteiro é normalizado pelo
+  // retângulo do canvas (não pela janela), pois o canvas não é fullscreen.
+  const raycaster = new THREE.Raycaster();
+  const ponteiro = new THREE.Vector2(-10, -10);
+  const onMove = (e) => {
+    const r = canvas.getBoundingClientRect();
+    ponteiro.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+  };
+  const onLeave = () => ponteiro.set(-10, -10);
+  canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerleave', onLeave);
+
+  const relogio = new THREE.Clock();
+  const _alvoPos = new THREE.Vector3();
+  const _rc = new THREE.Vector3();
+  const RAD = Math.PI / 180;
+
+  function atualizarEmpurrao(dt) {
+    raycaster.setFromCamera(ponteiro, camera);
+    const hitA = raycaster.intersectObject(malhaA, false)[0];
+    const hitL = raycaster.intersectObject(malhaL, false)[0];
+    const k = 1 - Math.exp(-dt / Math.max(CONFIG.PUSH.SUAV, 1e-4));
+    for (const [malha, hit] of [[malhaA, hitA], [malhaL, hitL]]) {
+      const ud = malha.userData;
+      _alvoPos.set(0, 0, 0);
+      let tx = 0, ty = 0, tz = 0;
+      if (hit) {
+        const pLocal = malha.worldToLocal(hit.point.clone());
+        const ox = Math.max(-1, Math.min(1, (pLocal.x - ud.centro.x) / ud.meia.x));
+        const oy = Math.max(-1, Math.min(1, (pLocal.y - ud.centro.y) / ud.meia.y));
+        _alvoPos.set(ox * CONFIG.PUSH.TRANSL, oy * CONFIG.PUSH.TRANSL, 0);
+        tx = -CONFIG.PUSH.PITCH * RAD * oy;
+        ty = CONFIG.PUSH.PITCH * RAD * ox;
+        tz = -CONFIG.PUSH.ROLL * RAD * ox;
+      }
+      ud.empurrao.lerp(_alvoPos, k);
+      ud.tombo.x += (tx - ud.tombo.x) * k;
+      ud.tombo.y += (ty - ud.tombo.y) * k;
+      ud.tombo.z += (tz - ud.tombo.z) * k;
+      const s = malha.scale.x;
+      const c = ud.centro;
+      malha.rotation.set(ud.tombo.x, ud.tombo.y, ud.tombo.z);
+      _rc.copy(c).multiplyScalar(s).applyEuler(malha.rotation);
+      malha.position.copy(ud.repouso).addScaledVector(c, s).add(ud.empurrao).sub(_rc);
+    }
+  }
+
+  let tAtual = 0;
+  let visivel = true;
+  let observador = null;
+  if (typeof IntersectionObserver !== 'undefined') {
+    observador = new IntersectionObserver((entries) => {
+      visivel = entries[0].isIntersecting;
+    });
+    observador.observe(canvas);
+  }
+
+  // Resize robusto (anti-estico): o wrap do canvas é `fixed` DENTRO do
+  // hero pinnado, e o GSAP aplica transform no pin — então o wrap segue
+  // a CAIXA do hero (que só atualiza no ScrollTrigger.refresh()), não a
+  // viewport direto. Buffer + aspecto medem a CAIXA (o display real):
+  // nunca estica, nas duas direções. resizeTo pula quando nada mudou
+  // (setSize realoca o buffer — sem isso, arrastar a janela engasga).
+  let ultimaCaixa = '';
+  function resizeTo(w, h) {
+    const chave = `${w}x${h}`;
+    if (chave === ultimaCaixa) return;
+    ultimaCaixa = chave;
+    renderer.setPixelRatio(Math.min(typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : 1, 2));
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setSize(w, h, false);
+    // Tamanho dos pontos das estrelas: px = tamanho * uEscala / distância.
+    estrelas.material.uniforms.uEscala.value =
+      COSMOS.ESCALA_PONTOS * (h * renderer.getPixelRatio()) /
+      (2 * Math.tan((CONFIG.FOV * Math.PI) / 360));
+  }
+  function resize() {
+    const ref = canvas.parentElement ?? canvas;
+    resizeTo(Math.max(Math.round(ref.clientWidth), 1), Math.max(Math.round(ref.clientHeight), 1));
+  }
+
+  // Ressincroniza o canvas quando a caixa muda — inclusive DEPOIS do
+  // refresh do pin (arrasto contínuo da janela). rAF corrige no próximo
+  // frame; o timeout é backstop (rAF pausa em aba oculta e travaria tudo).
+  // resizeTo ignora quando nada mudou, então aplicar 2x é de graça.
+  // Sem flags que possam travar. Observa o WRAP (a caixa que o pin
+  // redimensiona), não o canvas.
+  let observadorCaixa = null;
+  let caixaTimer = 0;
+  if (typeof ResizeObserver !== 'undefined') {
+    observadorCaixa = new ResizeObserver(() => {
+      requestAnimationFrame(resize);
+      clearTimeout(caixaTimer);
+      caixaTimer = setTimeout(resize, 120);
+    });
+    observadorCaixa.observe(canvas.parentElement ?? canvas);
+  }
+
+  // Gravidade do nav: projeta o centro do buraco na tela e publica em
+  // <body> (--bh-px/--bh-py/--bh-vis). O Nav lê e distorce cada link
+  // pela proximidade. Chamada a cada 6 frames (~10Hz) — ver o loop.
+  const _bhNDC = new THREE.Vector3();
+  function publicarGravidade() {
+    if (typeof document === 'undefined') return;
+    _bhNDC.copy(buraco.position).project(camera);
+    const visBH = _bhNDC.z < 1 && Math.abs(_bhNDC.x) < 1.3 && Math.abs(_bhNDC.y) < 1.3;
+    const r = canvas.getBoundingClientRect();
+    const px = ndcParaPx({ x: _bhNDC.x, y: _bhNDC.y }, r);
+    const st = document.body.style;
+    st.setProperty('--bh-px', `${px.x.toFixed(1)}px`);
+    st.setProperty('--bh-py', `${px.y.toFixed(1)}px`);
+    st.setProperty('--bh-vis', visBH ? '1' : '0');
+  }
+  let frameGrav = 0;
+
+  let rafId = 0;
+  const estatico = typeof matchMedia !== 'undefined' && prefereReduzirMovimento();
+  let cadAtiva = null, tCad = 0, esperaCad = 4;
+  (function loop() {
+    rafId = requestAnimationFrame(loop);
+    const dt = Math.min(relogio.getDelta(), 0.05);
+    if (!visivel) return;
+    applyProgress(tAtual, camera, alvo);
+    atualizarEmpurrao(dt);
+    if (!estatico) {
+      // Relógio da sessão: no F5 continua de onde estava (nada reinicia).
+      const t = tempoDaSessao(sessao);
+      // Nebulosas: deriva própria, mais lenta que as estrelas.
+      if (nebulosa) atualizarNebulosa(nebulosa, t);
+      // Deriva quase parada: volta completa em ~42min.
+      estrelas.rotation.y = anguloDeriva(t);
+      // Buraco negro na órbita + luz roxa nascendo dele (se move com ele).
+      atualizarBuracoNegro(buraco, t);
+      atualizarSol(sol, t, ESC, sessao.fase);
+      // Cadentes: uma a cada 5–13s, rastro curto de 0.5–0.9s.
+      if (cadAtiva) {
+        tCad += dt;
+        if (tCad >= cadAtiva.dur) {
+          cadente.visible = false;
+          esperaCad = cadAtiva.espera;
+          cadAtiva = null;
+        } else {
+          atualizarLinhaCadente(cadente, cadAtiva, tCad);
+        }
+      } else {
+        esperaCad -= dt;
+        if (esperaCad <= 0) {
+          cadAtiva = sortearCadente();
+          tCad = 0;
+          cadente.visible = true;
+        }
+      }
+    }
+    // Satélites fora do `if (!estatico)`: sob reduced-motion a deriva
+    // congela (t null) — os painéis ficam parados nas bases.
+    if (satelites) {
+      atualizarSatelites(satelites, estatico ? null : tempoDaSessao(sessao));
+    }
+    renderer.render(cena, camera);
+    // Gravidade do nav a ~10Hz (não a cada frame): projeta o buraco e
+    // publica em <body>. Fora do `if (!estatico)`: sob reduced-motion o
+    // buraco congela mas a câmera ainda orbita — o nav acompanha.
+    if (typeof document !== 'undefined' && frameGrav++ % 6 === 0) publicarGravidade();
+  })();
+  resize();
+  if (typeof document !== 'undefined') publicarGravidade();
+
+  return {
+    setProgress(t) {
+      tAtual = Math.min(1, Math.max(0, t));
+      applyProgress(tAtual, camera, alvo);
+    },
+    resize,
+    dispose() {
+      cancelAnimationFrame(rafId);
+      canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerleave', onLeave);
+      if (observador) observador.disconnect();
+      if (observadorCaixa) observadorCaixa.disconnect();
+      clearTimeout(caixaTimer);
+      const liberados = new Set();
+      cena.traverse(o => {
+        if (o.geometry && !liberados.has(o.geometry)) { liberados.add(o.geometry); o.geometry.dispose(); }
+        const mats = Array.isArray(o.material) ? o.material : (o.material ? [o.material] : []);
+        for (const m of mats) {
+          if (liberados.has(m)) continue;
+          liberados.add(m);
+          if (m.map) m.map.dispose();
+          m.dispose();
+        }
+      });
+      pmrem.dispose();
+      if (cenaEnv) cenaEnv.dispose();
+      renderer.dispose();
+    },
+  };
+}

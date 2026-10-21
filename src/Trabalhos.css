@@ -1,0 +1,350 @@
+/* #trabalhos — strip horizontal (desktop) / pilha vertical (mobile + reduced-motion). */
+.trabalhos {
+  position: relative;
+  z-index: 1;
+  background: #0c0b0c;
+  padding: clamp(4rem, 8vw, 7rem) 0;
+  overflow: hidden;
+}
+
+/* Pin horizontal precisa de sala: seção com no mínimo 104svh (desktop).
+   Sem isso a página acaba antes do tween completar e o último card nunca
+   entra 100% — era o corte na lateral direita. Os 4svh extras são folga
+   para a conta fechar com arredondamento de pixel em qualquer viewport.
+   Centraliza o strip. */
+@media (min-width: 768px) {
+  .trabalhos {
+    min-height: 104svh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+.trabalhos-head {
+  padding: 0 8vw;
+  margin-bottom: 2.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 1rem 2rem;
+}
+
+.trabalhos-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9780ff;
+  width: 100%;
+}
+
+.trabalhos-titulo {
+  font-family: 'Sofia Sans Condensed', 'Archivo', system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(2.4rem, 6vw, 5rem);
+  line-height: 0.95;
+  color: #fff;
+}
+
+.trabalhos-titulo em {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 300;
+  text-transform: none;
+}
+
+/* Contador lateral removido a pedido — sem slide numerado. */
+
+.trabalhos-viewport {
+  overflow: hidden;
+  /* Sangria vertical: o hover levanta o card 4px + sombra de 50px — sem esse
+     respiro interno, o topo é clipado na borda do viewport e parece cortado
+     pela seção acima. Margem negativa = layout externo idêntico. */
+  padding-block: 24px;
+  margin-block: -24px;
+}
+
+.trabalhos-trilho {
+  display: flex;
+  gap: clamp(1.5rem, 3vw, 3rem);
+  /* Padding só à esquerda + espaçador real à direita (::after): o
+     padding-right de um trilho max-content é ignorado no scrollWidth pelo
+     Chromium, o que encurtava o tween e cortava o último card no fim. */
+  padding: 0 0 0 8vw;
+  width: max-content;
+  max-width: none;
+}
+
+/* Espaçador final de 8vw como elemento real — entra sempre na medição do
+   scrollWidth, então o último card termina totalmente visível. */
+.trabalhos-trilho::after {
+  content: '';
+  flex: 0 0 8vw;
+}
+
+.trabalho-card {
+  width: clamp(16rem, 32vw, 28rem);
+  flex-shrink: 0;
+}
+
+/* Hover só após o reveal (sem brigar com a transição de entrada Olha). */
+.trabalho-card.reveal-visivel {
+  transition: transform 0.5s var(--al-out);
+}
+
+.trabalho-card.reveal-visivel:hover,
+.trabalho-card.reveal-visivel:focus-within {
+  transform: translateY(-4px);
+}
+
+.trabalho-thumb {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: border-color 0.5s var(--al-out), box-shadow 0.5s var(--al-out);
+}
+
+.trabalho-card:hover .trabalho-thumb,
+.trabalho-card:focus-within .trabalho-thumb {
+  border-color: rgba(151, 128, 255, 0.55);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45), 0 0 32px rgba(151, 128, 255, 0.18);
+}
+
+/* Fundo em camada própria: o zoom nunca estica a borda. */
+.trabalho-thumb-fundo {
+  position: absolute;
+  inset: 0;
+  transition: transform 0.6s var(--al-out);
+}
+
+.trabalho-card:hover .trabalho-thumb-fundo,
+.trabalho-card:focus-within .trabalho-thumb-fundo {
+  transform: scale(1.07);
+}
+
+/* Véu editorial bottom-heavy: imagem limpa no repouso, texto legível no hover. */
+.trabalho-thumb-veu {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s var(--al-out);
+  background: linear-gradient(to top, rgba(12, 11, 12, 0.94) 0%, rgba(12, 11, 12, 0.55) 45%, rgba(12, 11, 12, 0) 100%);
+}
+
+.trabalho-card:hover .trabalho-thumb-veu,
+.trabalho-card:focus-within .trabalho-thumb-veu {
+  opacity: 1;
+}
+
+/* Hot glow lavanda (Visuvate) na posição do mouse. */
+.trabalho-thumb::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.5s var(--al-out);
+  background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(151, 128, 255, 0.32), rgba(151, 128, 255, 0) 60%);
+  pointer-events: none;
+}
+
+.trabalho-card:hover .trabalho-thumb::after,
+.trabalho-card:focus-within .trabalho-thumb::after {
+  opacity: 1;
+}
+
+.trabalho-num {
+  position: absolute;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 1;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* CTA em cascata: sobe do rodapé do thumb no hover (teclado junto). */
+.trabalho-thumb-cta {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 1;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: rgba(12, 11, 12, 0.55);
+  opacity: 0;
+  transform: translateY(12px);
+  transition:
+    opacity 0.45s var(--al-out) 0.05s,
+    transform 0.45s var(--al-out) 0.05s,
+    border-color 0.45s var(--al-out),
+    color 0.45s var(--al-out);
+  pointer-events: none;
+}
+
+.trabalho-card:hover .trabalho-thumb-cta,
+.trabalho-card:focus-within .trabalho-thumb-cta {
+  opacity: 1;
+  transform: none;
+  border-color: #9780ff;
+  color: #9780ff;
+}
+
+.trabalho-thumb-seta {
+  display: inline-block;
+  transition: transform 0.45s var(--al-out);
+}
+
+.trabalho-card:hover .trabalho-thumb-seta,
+.trabalho-card:focus-within .trabalho-thumb-seta {
+  transform: translate(2px, -2px);
+}
+
+.trabalho-nome {
+  position: relative;
+  width: fit-content;
+  margin-top: 1rem;
+  font-family: 'Sofia Sans Condensed', 'Archivo', system-ui, sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  font-size: clamp(1.4rem, 2.5vw, 2rem);
+  line-height: 1;
+  color: #fff;
+}
+
+/* Link-line Olha: sublinhado lavanda cresce da esquerda no hover do card. */
+.trabalho-nome::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  height: 1px;
+  width: 100%;
+  background: #9780ff;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.5s var(--al-out);
+}
+
+.trabalho-card:hover .trabalho-nome::after,
+.trabalho-card:focus-within .trabalho-nome::after {
+  transform: scaleX(1);
+}
+
+.trabalho-meta {
+  margin-top: 0.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #9a9a9a;
+}
+
+.trabalho-link {
+  display: inline-block;
+  margin-top: 0.75rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+  padding-bottom: 2px;
+}
+
+.trabalho-link:hover {
+  color: #9780ff;
+  border-color: #9780ff;
+}
+
+.trabalho-link span {
+  display: inline-block;
+  transition: transform 0.45s var(--al-out);
+}
+
+.trabalho-card:hover .trabalho-link span,
+.trabalho-link:hover span {
+  transform: translate(2px, -2px);
+}
+
+/* Touch (sem hover): CTA e véu sempre visíveis, sem zoom. */
+@media (hover: none) {
+  .trabalho-thumb-veu,
+  .trabalho-thumb-cta {
+    opacity: 1;
+    transform: none;
+  }
+
+  .trabalho-card:hover .trabalho-thumb-fundo,
+  .trabalho-card:focus-within .trabalho-thumb-fundo {
+    transform: none;
+  }
+}
+
+@media (max-width: 767px) {
+  .trabalhos-trilho {
+    flex-direction: column;
+    width: auto;
+    padding: 0 6vw;
+  }
+
+  /* Sem espaçador horizontal na pilha vertical. */
+  .trabalhos-trilho::after {
+    display: none;
+  }
+
+  .trabalho-card {
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trabalhos {
+    min-height: 0;
+    display: block;
+  }
+
+  .trabalhos-trilho {
+    flex-direction: column;
+    width: auto;
+  }
+
+  .trabalhos-trilho::after {
+    display: none;
+  }
+
+  .trabalho-card {
+    width: auto;
+  }
+
+  /* Reduced-motion: hover vira estado estático, sem zoom nem cascata. */
+  .trabalho-thumb-fundo,
+  .trabalho-thumb-veu,
+  .trabalho-thumb-cta,
+  .trabalho-thumb-seta,
+  .trabalho-nome::after {
+    transition: none;
+  }
+
+  .trabalho-card.reveal-visivel:hover,
+  .trabalho-card.reveal-visivel:focus-within {
+    transform: none;
+  }
+
+  .trabalho-card:hover .trabalho-thumb-fundo,
+  .trabalho-card:focus-within .trabalho-thumb-fundo {
+    transform: none;
+  }
+}

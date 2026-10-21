@@ -1,111 +1,217 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
-
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
-
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {
-  margin: 0;
+  background: #0c0b0c;
+  color: #fff;
+  font-family: 'Archivo', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
+/* Tokens de motion do DS alisson (Visuvate + studiors/Yakushev + Olha). */
+:root {
+  --al-ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --al-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --al-roll: cubic-bezier(0.11, 0.82, 0.39, 0.92);
+  --al-blue: #0099ff;
+}
+
+/* Fallback de âncoras quando o Lenis está off (reduced-motion/sem JS). */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Seleção do DS (synchronized): em vez do azul padrão, o trecho
+   selecionado só troca a cor da fonte — sem marca-texto. */
+::selection {
+  background: transparent;
+  color: #9780ff;
+}
+
+::-moz-selection {
+  background: transparent;
+  color: #9780ff;
+}
+
+/* Reveals on-scroll (Olha): y28→0 .8s no easing de roll. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+}
+
+.reveal-visivel {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.8s var(--al-roll),
+    transform 0.8s var(--al-roll);
+}
+
+/* Reduced-motion: reveals já visíveis, sem transição nem smooth. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .reveal,
+  .reveal-visivel {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+.hero {
+  position: relative;
   min-height: 100svh;
   display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
+  align-items: center;
+  overflow: hidden;
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
+.hero-canvas-wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+}
+
+.hero-canvas-wrap canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hero-al-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Sofia Sans Condensed', 'Archivo', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(6rem, 25vw, 20rem);
+  color: rgba(255, 255, 255, 0.08);
+  user-select: none;
+}
+
+.hero-ident {
+  position: relative;
+  z-index: 1;
+  padding-left: 8vw;
+  max-width: 40vw;
+}
+
+.hero-ident h1 {
+  font-family: 'Sofia Sans Condensed', 'Archivo', system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(3.8rem, 11vw, 12rem);
+  line-height: 0.9;
+  letter-spacing: 0;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+.hero-ident p {
+  margin-top: 1rem;
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 300;
+  font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+  color: #d8d8d8;
+}
+
+.hero-chapter {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  margin-right: 8vw;
+  padding: 0.6rem 1.4rem;
+  color: #9780ff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
   font-weight: 500;
-  color: var(--text-h);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  background: rgba(23, 20, 23, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  animation: hero-chapter-in 0.45s ease-out;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@keyframes hero-chapter-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+.hero-chapters {
+  position: relative;
+  z-index: 1;
+  margin-left: auto;
+  margin-right: 8vw;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  color: #9780ff;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hero-chapters li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.hero-chapter-n {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+}
+
+.hero-chapter-word {
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 767px) {
+  .hero {
+    flex-direction: column;
+    justify-content: flex-start;
   }
-}
-p {
-  margin: 0;
-}
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
+  .hero-ident {
+    max-width: none;
+    padding-left: 6vw;
+    padding-right: 6vw;
+    order: 2;
+  }
 
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  .hero-chapter,
+  .hero-chapters {
+    margin-left: 0;
+    padding-right: 0;
+    padding-left: 6vw;
+    align-self: flex-start;
+    order: 3;
+  }
 }
